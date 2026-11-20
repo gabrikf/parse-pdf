@@ -1,8 +1,12 @@
 # Document processing verification
 
 **Verdict**: FAIL
-**Proofs**: `proofs.md` at 19cf1ff
+**Proofs**: `proofs.md` at 68cfd98
 **Verifier**: independent sub-agent (author != verifier)
+
+This pass covered `4aa581f..68cfd98` (6fa730d, 8335551, 68cfd98: AD-042..AD-049 and the pre-push
+review fixes) and the rows that diff touches; the other rows stand as judged at 19cf1ff, with their
+findings closed at 28a6e1c. C60's browser row is the screens review's, not this one.
 
 ## Checks
 
@@ -30,7 +34,7 @@
 | C20 | `test_documents_api.py` `test_envelope_and_request_id_on_success_and_error`; `test_http_edges_api.py` `test_unknown_route_is_an_envelope`, `test_500_is_an_envelope_without_exception_text` | yes |
 | C21 | `test_http_edges_api.py` `test_ready_is_200_when_redis_and_bucket_answer`, `test_ready_is_503_naming_each_failing_check`, `test_live_is_200` | yes - 503 is shown with both checks failing together, never one alone |
 | C22 | `scripts/proofs/concurrency.sh` -> `scripts/load/load_test.py` (exit 0 only on `{200: 5000}`, `{202: 50}`, `{ready: 50}`, `{"1": 50}`) | yes - runs on the e2e stack (stub model, `SESSIONS_PER_MINUTE_PER_IP=1000`, AD-032) |
-| C23 | `test_process_pypdf.py` `test_upload_returns_queued_before_any_worker_runs`; `test_event_loop_free.py` `test_live_answers_during_a_1000_page_upload` | yes - the first test cannot fail (no worker runs in it); the second holds the event-loop claim |
+| C23 | `test_process_pypdf.py` `test_upload_returns_queued_before_any_worker_runs`; `test_event_loop_free.py` `test_live_answers_during_a_1000_page_upload` | partly - the 1000-page upload is one small file, so the test stays green while 6fa730d moved `child.start()` onto the event loop: own example, 3 x 50 MB inspections stall the loop 226 ms (75 ms at 4aa581f), 4 stall it 518 ms on the first call (see findings) |
 | C24 | `scripts/proofs/redis-restart.sh` -> `scripts/load/redis_restart.py` | partly - the worker is stopped before Redis restarts and started after, so a worker reconnecting across the restart is never exercised; API reconnect and AOF survival are shown |
 | C25 | `test_retention.py` `test_every_doc_and_session_key_gets_a_week`, `test_a_status_change_refreshes_the_ttl`, `test_bucket_expires_objects_after_7_days` | yes - the refresh is asserted for `begin_run` only, not for `finalize` or `restart_run` |
 | C26 | `test_upload_api.py` `test_filename_is_cleaned_and_never_the_key` | no - only `../../etc/passwd.pdf` is asserted; the control-character drop and the 255-character cut the check names have no assertion (own example shows the code does both) |
@@ -44,7 +48,7 @@
 | C34 | `test_call_gate_redis.py` `test_40_calls_from_two_workers_start_30_then_10_after_60s`, `test_one_call_at_a_time_per_worker` | yes |
 | C35 | `test_worker_process.py` `test_sigkilled_worker_job_is_reclaimed_and_ends_ready`; `test_recovery_in_process.py` `test_idle_entry_is_reclaimed_by_another_worker` | yes |
 | C36 | `test_recovery_in_process.py` `test_claim_refresh_keeps_a_long_job_on_one_worker` | yes |
-| C37 | `test_recovery_in_process.py` `test_sixth_delivery_is_dead_letter_with_no_calls` (5th and 6th) | yes |
+| C37 | `test_recovery_in_process.py` `test_sixth_delivery_is_dead_letter_with_no_calls` (5th and 6th, hint with no recorded cause); `test_failure_cause.py` `test_a_timed_out_delivery_is_named_when_the_tries_run_out` | yes - both hints are asserted as exact strings with the 5 from config; `note_failure`'s `run_id` compare-and-set, `restart_run` clearing `last_error` and `docs:dead` `MAXLEN` have no test (own example: all hold); the card showing the API's hint is not asserted anywhere |
 | C38 | `test_process_pypdf.py` `test_redelivered_final_run_is_acked_with_no_calls` | yes - parser calls are not counted, but a re-parse would reach the summary and show in `chat.calls` |
 | C39 | `test_process_pypdf.py` `test_stale_run_and_deleted_document_are_dropped` | yes |
 | C40 | `test_recovery_in_process.py` `test_stop_signal_lets_the_running_job_finish`, `test_job_past_the_grace_stays_pending_for_reclaim`; `test_worker_process.py` `test_sigterm_exits_cleanly_and_heartbeat_goes_stale` | partly - "stops reading new entries" has no assertion (one entry only), and the process test never asserts the heartbeat goes stale that its name claims |
@@ -67,11 +71,11 @@
 | C57 | `e2e/upload.spec.ts` `upload 3 samples by picker reaches the parsed feed`, `refused files show their reason inline` | yes - "one upload request" is counted only in C58's scenario |
 | C58 | `e2e/upload.spec.ts` `a locked file asks for its password and re-sends only that file` | yes |
 | C59 | `useActiveDocuments.test.tsx` `polls the active list every 2000 ms and stops when it is empty`, `refetches the feed when a document leaves the active list` | yes - with under 50 active documents; past 50 see the stories finding |
-| C60 | `e2e/reading.spec.ts` `the pages sheet shows 50 pages and loads the next 50`; `Markdown.test.tsx` `markdown shows raw html as literal text` | yes |
+| C60 | `e2e/reading.spec.ts` `the pages sheet shows 50 pages and loads the next 50`, `the pages sheet opens at full height even for one page`; `Markdown.test.tsx` `markdown shows raw html as literal text` | yes - the full-height test compares the sheet's height with its computed `max-height` on a 1-page document, so it fails without `.full` (AD-042); the browser row is the screens review's |
 | C61 | `e2e/reading.spec.ts` `a no_text card shows its hint and reparses with gemini` | yes |
-| C62 | `e2e/actions.spec.ts` `reparse with another parser asks first and cancel sends nothing`, `delete forever removes the card and it stays gone after reload` | yes - "cancel sends nothing" is asserted for reparse only, not requeue or delete |
-| C63 | `App.test.tsx` `an unreachable api shows an error with a retry control`; `e2e/notices.spec.ts` `a rate-limited upload shows the wait in seconds` | yes |
-| C64 | `e2e/layout.spec.ts` `no horizontal scroll and touch targets are at least 44 px`; `e2e/a11y.spec.ts` `keyboard-only upload and confirm with a visible focus ring`, `dialogs close on escape and keep focus inside` | yes |
+| C62 | `e2e/actions.spec.ts` `reparse with another parser asks first and cancel sends nothing`, `delete forever removes the card and it stays gone after reload`, `a refused action keeps its confirmation open with the reason and refreshes the feed` | partly - the refusal (AD-044) is shown for a `404` on delete only, not a `409` busy or changed or a `429` out of budget; "cancel sends nothing" for reparse only; a cancel while a confirm is in flight is never exercised, and there the flow breaks (see findings) |
+| C63 | `App.test.tsx` `an unreachable api shows an error with a retry control`; `e2e/notices.spec.ts` `a rate-limited upload shows the wait in seconds` | yes - the live region is asserted to keep its first text while the seconds on screen tick, so a ticking region fails it (AD-045); the end announcement "You can upload again." has no assertion |
+| C64 | `e2e/layout.spec.ts` `no horizontal scroll and touch targets are at least 44 px`; `e2e/a11y.spec.ts` `keyboard-only upload and confirm with a visible focus ring`, `dialogs close on escape and keep focus inside` | yes - unchanged tests pass over the new dialog heights and the scrolling confirmation; the "..." disclosure (AD-046: Escape closes it, focus back on the toggle, no menu roles) is asserted in C73's `a too_large card offers only delete forever`, on one card with one action |
 | C65 | `e2e/style.spec.ts` `the page calls only its own origin under /api/v1/` | yes |
 | C66 | `e2e/a11y.spec.ts` `every visible label and button is in sentence case` | yes |
 | C67 | `e2e/style.spec.ts` `the primary color, fonts and no shadows or gradients` | yes |
@@ -80,7 +84,7 @@
 | C70 | `e2e/layout.spec.ts` `wide screens show both rails with the budget and phones a tab bar` | partly - the budget is asserted as the text `of 3,000`, which a hard-coded limit also passes; the `used` value from `GET /api/v1/budget` is not checked |
 | C71 | `e2e/reading.spec.ts` `copy summary copies the markdown and shows copied` | partly - "Copied" is asserted to appear and to clear within 4 s; a label gone after 100 ms also passes |
 | C72 | `e2e/actions.spec.ts` `parsed, failed and all chips filter the feed with counts` | yes - "All newest first" is a count, not an order |
-| C73 | `e2e/actions.spec.ts` `retry a dead document moves it to the stories row as queued`, `a too_large card offers only delete forever` | partly - the `dead` card's "Reparse with another parser" and "Delete forever" are never asserted |
+| C73 | `e2e/actions.spec.ts` `retry a dead document moves it to the stories row as queued`, `a too_large card offers only delete forever` | yes - the `dead` card's three buttons and each confirmation are asserted (closed at 28a6e1c); the card's text for `max_deliveries`, now the API's `hint` (AD-043), is never shown in a test: the only `dead` card in e2e is `provider_rejected` with no hint |
 | C74 | `python3 scripts/proofs/check_readme.py sections` | yes |
 | C75 | `python3 scripts/proofs/check_readme.py how-i-worked` | yes |
 | C76 | `python3 scripts/proofs/check_readme.py budget` | yes |
@@ -88,7 +92,7 @@
 | C78 | `scripts/proofs/curl-walkthrough.sh` -> `scripts/proofs/curl_walkthrough.py` | yes |
 | C79 | `scripts/proofs/package-check.sh` | yes |
 | C80 | `scripts/coverage-gate.sh`; `test_module_size.py` `test_no_app_module_is_over_200_lines`; Build row of `proofs.md` (ruff, mypy, lint-imports, ESLint, tsc) | yes |
-| C81 | `npm --prefix frontend run e2e` (156 passed, 6 projects) | yes |
+| C81 | `npm --prefix frontend run e2e` (168 passed, 6 projects) | yes |
 | C82 | `test_bucket_setup.py` `test_concurrent_ensure_bucket_on_a_fresh_store_both_succeed`, `test_ensure_bucket_twice_in_a_row_is_a_no_op` | yes |
 
 ## Own examples
@@ -108,6 +112,24 @@ SeaweedFS (deleted afterwards, not committed):
 - AC 26, `a<DEL>c.pdf`, a 304-character name, `C:\Users\me\report.pdf`, `dir/`, a name with
   U+202E -> DEL and U+202E dropped, cut to 255, `report.pdf`, `document.pdf` (holds).
 
+Run at `HEAD` 68cfd98 for this pass (throwaway files, deleted afterwards, not committed):
+
+- AC 23, past the 1000-page sample: `IsolatedRunner` with arguments of 52,428,800 bytes (the file
+  cap), a ticker measuring the event loop's longest gap. One `child.start()` blocks 78 ms (215 ms on
+  the first call, which launches the forkserver). 3 concurrent runs (one upload, `FILES_IN_PARALLEL`
+  3): 226 ms warm, 445 ms cold; the same with the start inside the thread as at 4aa581f: 75 ms and
+  81 ms. 4 concurrent runs (`inspect_concurrency` 4, two uploads): 325 ms warm, 518 ms cold (breaks
+  the 0.5 s budget).
+- AC 62, a cancel while the confirm is in flight (vitest, `useConfirmFlow` with a held `fetch`):
+  confirm delete `a.pdf`, cancel, open retry for `b.pdf`, confirm it, then `a` answers `409
+  document_busy` -> `b`'s confirmation shows "This document is being processed right now..." and
+  the only request sent was `DELETE /api/v1/documents/a`. Same start, `a` answers `200` -> `b`'s
+  confirmation closes with nothing sent (breaks).
+- AC 37 / AD-043, the other causes: a delivery failing with `status 503` -> `last_error` "the model
+  provider answered with status 503"; `note_failure` with another `run_id` writes nothing; the 6th
+  delivery's hint names status 503; requeue clears `last_error`, and the next run exhausted with no
+  recorded cause says "the worker stopped before it finished" (holds).
+
 ## Findings
 
 | Finding | Evidence | Fix | Closed |
@@ -121,3 +143,6 @@ SeaweedFS (deleted afterwards, not committed):
 | A worker that gets SIGTERM while blocked in `XREADGROUP` (up to 2 s) still starts the entry that read returns and gives it the full 30 s grace; no test asserts that a stopped worker reads nothing new, and the process test's name claims a stale heartbeat it never checks | `backend/app/worker/consumer_loop.py` `run` -> `_next_job` -> `_run_with_grace` (the `stop` flag is checked only before the read); `test_sigterm_exits_cleanly_and_heartbeat_goes_stale` asserts only exit codes | check `stop` after the read returns and leave the entry pending (unacked) when it is set; add a test with 2 queued entries where stop during the first leaves the second unread; assert the heartbeat check exits 1 after the stale window, or rename the test | 28a6e1c - C40 `test_entry_read_after_the_stop_signal_stays_pending_with_no_calls`; `test_sigterm_exits_cleanly_and_heartbeat_goes_stale` asserts the stale beat |
 | No test pins which model each parser kind calls; C42 injects the model id and C46's stub answers any model | `backend/app/worker_container.py` maps `GPT5_MINI` -> `settings.gpt_parser_model_id`; `test_model_parsers_stub.py` does not read the model the stub received | have the stub record the `model` field (or use a recording `ChatModel` through `build_worker_parts`) and assert `openai/gpt-5-mini` / `google/gemini-3.1-flash-lite` per parser | 28a6e1c - C46 `test_scanned_pdf_reaches_ready_with_markdown_pages` asserts the model the stub received per parser |
 | Looser assertions than the criterion fixes: C7 never counts bucket objects for 21 files; C70 asserts the static `of 3,000` and not the `used` value from `GET /api/v1/budget`; C71 never asserts "Copied" lasts about 2 s; C54 never asserts newest-first on the page; C25 asserts the TTL refresh for `begin_run` only; C24's proof stops the worker during the Redis restart, so worker reconnection is not shown | the tests named in the `## Checks` rows of C7, C24, C25, C54, C70, C71 | assert bucket `KeyCount` unchanged for 21 files; assert the rail shows the `used` from a seeded budget; assert "Copied" is still visible at 1.5 s and gone by 2.5 s; seed 2 documents and assert card order; assert TTLs after `finalize` and `restart_run`; keep the worker running through the restart in `redis_restart.py` | 28a6e1c - C7 `test_21_files_are_422_and_store_nothing` (KeyCount), C70 rail shows `used`, C71 cleared between 1.5 and 2.5 s, C54 newest first, C25 TTL after `finalize` and `restart_run`, C24 `redis-restart.sh` second phase with workers running |
+| A cancel while a reparse, retry or delete is in flight lets that request's answer land on the next confirmation: a refusal shows its reason inside another file's confirmation, a success closes it with nothing sent, and that confirmation's own Confirm is dropped until the first answer comes | `frontend/src/pages/UploadPage/hooks/useConfirmFlow.ts:37` and `:46` set `asking` and `error` for whatever confirmation is open; `:60` drops any confirm while one mutation is pending; Cancel and Escape (`ConfirmDialog.tsx`, `Dialog` `onClose`) stay live while pending; own example: delete `a.pdf`, cancel, retry `b.pdf`, confirm, `a` answers `409` -> `b` shows "This document is being processed right now..." and only `DELETE .../a` was sent; `a` answers `200` -> `b` closes unsent | tie each answer to its request: keep the in-flight request in a ref and touch `asking`/`error` only while it is still the one open (or pass per-call `onSuccess`/`onError` to `mutate` and compare), and let a new confirmation send; or keep the confirmation modal while pending (Cancel and Escape disabled); add a hook test with a held `fetch` for both answers | 9de7ed3 - C62 `useConfirmFlow.test.tsx` "keeps a cancelled confirmation's answer away from the one opened after it", "sends one request for a double click" |
+| The cancel-kill fix put `child.start()` on the event loop. With `forkserver`, `start()` pickles the arguments, the whole PDF, into the server's pipe synchronously, so each inspection blocks the API's loop for about 78 ms per 50 MB, and concurrent inspections add up: past C23's 0.5 s on the first upload after start | `backend/app/core/isolated.py:55` calls `self._start(fn, args)` on the loop, `:67` `child.start()`; `pdf_inspector.py:22` passes the file's bytes; own example: 3 x 50 MB -> 226 ms gap (75 ms at 4aa581f), 4 cold -> 518 ms; `test_live_answers_during_a_1000_page_upload` uploads one small file, so nothing fails | start the child in the worker thread again and give the coroutine a handle to kill it: the thread stores the process in a holder, the `CancelledError` branch kills it, and the thread kills a child it started after a cancel; add a test that the loop's longest gap stays under 100 ms while 3 runs with 50 MB arguments start | 9de7ed3 - C23 `test_starting_children_with_large_pdfs_does_not_block_the_loop` (old code: 1.87 s gap; the start now runs in the worker thread) |
+| Rules the diff added with no test, or a looser one than the AD fixes: AD-044's inline reason is shown for a `404` only (not `409` busy or changed, not `429` out of budget); AD-045's end announcement "You can upload again." is never asserted; AD-043's card text (`DeadBody` shows `document.hint`) has no test, so a revert to the static copy stays green; `note_failure`'s `run_id` compare-and-set and `restart_run` clearing `last_error` are untested (both hold in the own example) | the tests named in the `## Checks` rows of C37, C62, C63 and C73 | add the `409` and `429` cases to the refused-action scenario; assert the live region reads "You can upload again." after the wait; assert a `max_deliveries` card shows its API hint (seed one through the API or the e2e Redis); add an integration test where a stale `run_id` notes nothing and a requeue clears `last_error` | 9de7ed3 - C62 `useConfirmFlow.test.tsx` 409/404/429 reasons; C63 `Notices.test.tsx` start and end announcement; C37 `DeadBody.test.tsx` and `test_only_the_current_run_notes_a_failure_and_a_rerun_forgets_it` |

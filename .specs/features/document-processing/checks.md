@@ -114,6 +114,7 @@ Proof: `scripts/proofs/concurrency.sh`
 **C23** - The upload answers `202 queued` before any worker reads the entry, and `/health/live` keeps answering under 0.5 s during a 1000-page upload (AC 23)
 Proof: run backend | test_upload_returns_queued_before_any_worker_runs PASSED
 Proof: run backend | test_live_answers_during_a_1000_page_upload PASSED
+Proof: run backend | test_starting_children_with_large_pdfs_does_not_block_the_loop PASSED
 
 **C24** - A Redis restart with 5 documents `queued` ends with all 5 `ready`, and the first API request after Redis is back is not a `5xx` (AC 24)
 Proof: `scripts/proofs/redis-restart.sh`
@@ -183,6 +184,8 @@ Proof: run backend | test_claim_refresh_keeps_a_long_job_on_one_worker PASSED
 **C37** - The 6th delivery ends `dead` `max_deliveries` with 0 parser or model calls, copies `{document_id, run_id, error_code, deliveries}` to `docs:dead` and acks; the 5th is processed (AC 37)
 Proof: run backend | test_sixth_delivery_is_dead_letter_with_no_calls PASSED
 Proof: run backend | test_a_timed_out_delivery_is_named_when_the_tries_run_out PASSED
+Proof: run backend | test_only_the_current_run_notes_a_failure_and_a_rerun_forgets_it PASSED
+Proof: run web | ✓ shows the API's hint, which names the tries and the last cause
 
 **C38** - A redelivered entry whose run is already final is acked with 0 parser and 0 model calls (AC 38)
 Proof: run backend | test_redelivered_final_run_is_acked_with_no_calls PASSED
@@ -300,11 +303,15 @@ Proof: run e2e | ✓ a no_text card shows its hint and reparses with gemini
 Proof: run e2e | ✓ reparse with another parser asks first and cancel sends nothing
 Proof: run e2e | ✓ delete forever removes the card and it stays gone after reload
 Proof: run e2e | ✓ a refused action keeps its confirmation open with the reason and refreshes the feed
+Proof: run web | ✓ keeps a cancelled confirmation's answer away from the one opened after it
+Proof: run web | ✓ a 409 document_busy keeps the confirmation open with its reason
+Proof: run web | ✓ a 429 model_budget_exhausted keeps the confirmation open with its reason
 Proof: browser - open the reparse confirmation at 375 x 812, save `captures/PhoneConfirm.running.png`
 
 **C63** - An unreachable API shows an error with a retry control; a `429` shows the wait in seconds from `Retry-After` (AC 63)
 Proof: run web | ✓ an unreachable api shows an error with a retry control
 Proof: run e2e | ✓ a rate-limited upload shows the wait in seconds
+Proof: run web | ✓ announces the wait when it starts and when it ends, and nothing in between
 
 **C64** - At 375, 768 and 1280 px there is no horizontal scroll, every control is reachable by keyboard with a visible focus ring, dialogs close on Escape and keep focus inside, and touch hit areas are at least 44 x 44 px (AC 64)
 Proof: run e2e | ✓ no horizontal scroll and touch targets are at least 44 px
@@ -429,7 +436,7 @@ Proof: run backend | test_ensure_bucket_twice_in_a_row_is_a_no_op PASSED
 ## Handoff
 
 - **Settled mid-build:** none
-- **Dispatched:** Verifier at `19cf1ff`, returned; screens round 1 at `19cf1ff`, returned; screens round 2 at `28a6e1c`, returned
+- **Dispatched:** Verifier at `19cf1ff`, returned; screens round 1 at `19cf1ff`, returned; screens round 2 at `28a6e1c`, returned; new screens review (AD-049) round 1 at `932cbba`, returned; Verifier on 4aa581f..68cfd98 at `68cfd98`, returned (FAIL, 3 findings, closed by `9de7ed3`); new screens review round 2 at `68cfd98`, returned (11 match)
 - **Boundary:** S1-S5 committed in 0967d3c (AD-033), C82 in a5244c8, C1's clean-checkout record in a5f5361; S6 (C54-C73) and S7 (C74-C80) committed after them; every slice pushed to `origin/main`
 - **Abandoned:** a `ProcessPoolExecutor` for inspection and parsing (it cannot kill a hung child; AD-026); `--reporter=list` on the e2e Run line (a CLI reporter replaces the config's, so no HTML report was written: the Run line now uses the config's list and HTML reporters); the stub's fail-once keyed on the whole text (a retried document's summary call was refused again; AD-034)
 - **Walked:** on the Vite dev server (`.claude/launch.json`, port 5180, `/api` proxied to the e2e stack) by `frontend/captures/running.capture.ts` at each frame's size, every state reached from the one route `/`: empty feed (first visit) -> upload dialog with 3 files, 1 refused ("Upload PDFs" in the rail or tab bar) -> stories row with 2 active files -> Parsed feed with a ready, a no_text and a ready card -> pages sheet ("View all 85 pages") -> reparse confirmation (the card's reparse icon) -> Failed chip with a dead and a too_large card -> Delete forever confirmation (the dead card's button); each state saved as `captures/<Frame>.running.png` and compared with its frame by eye before commit (the reparse parser rows and the upload dialog's "Add more files" were fixed to match)
