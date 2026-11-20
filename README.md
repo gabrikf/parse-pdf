@@ -13,15 +13,7 @@ shows the feed on a phone, a tablet or a laptop.
 **Design prototype.** Before any frontend code, the page was designed as a live HTML canvas of 11
 frames (phone, tablet and desktop, light and dark, every state) and iterated until it was approved:
 [open the prototype](https://claude.ai/artifact/SjyC1dbhNKYs437TwVXWBX). The build was held to it,
-and the e2e screenshots were compared with it frame by frame. The same frames are in the zip as
-pictures, in
-[`.specs/features/document-processing/captures/`](.specs/features/document-processing/captures/):
-
-<p align="center">
-  <img src=".specs/features/document-processing/captures/PhoneLight.png" width="160" alt="Prototype frame: the feed on a phone in light mode">
-  <img src=".specs/features/document-processing/captures/PhoneDark.png" width="160" alt="Prototype frame: the feed on a phone in dark mode">
-  <img src=".specs/features/document-processing/captures/PhonePages.png" width="160" alt="Prototype frame: a document's pages open on a phone">
-</p>
+and the e2e screenshots were compared with it frame by frame.
 
 ## Quick start
 
