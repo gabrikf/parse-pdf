@@ -6,7 +6,7 @@ Run web: `npm --prefix frontend run test -- --reporter=verbose`
 Run e2e: `npm --prefix frontend run e2e -- --reporter=list`
 Plan: `.specs/features/document-processing/plan.md`
 
-81 checks in 7 slices · 13 one-way doors · 0 open, of which 0 block
+82 checks in 7 slices · 13 one-way doors · 0 open, of which 0 block
 
 Backend integration tests run against the real Redis and SeaweedFS of `compose.test.yaml`, with
 OpenRouter replaced by a fake `ChatModel`, respx, or the local stub (`backend/stubs/`). The
@@ -366,6 +366,12 @@ Proof: run backend | test_no_app_module_is_over_200_lines PASSED
 
 **C81** - Every Playwright scenario passes in Chromium at 375 x 812, 768 x 1024 and 1280 x 1240, light and dark, against the Compose stack with the e2e override and the OpenRouter stub, `retries: 0`, report and screenshots in `evidence/e2e/` (AC 81)
 Proof: `npm --prefix frontend run e2e`
+
+### Appended mid-build
+
+**C82** - Two API processes starting on a fresh store both come up: a concurrent bucket creation that answers "already owned" counts as created, so no process restarts (AC 1; found by the clean-checkout proof of C1)
+Proof: run backend | test_concurrent_ensure_bucket_on_a_fresh_store_both_succeed PASSED
+Proof: run backend | test_ensure_bucket_twice_in_a_row_is_a_no_op PASSED
 
 ## Coverage
 

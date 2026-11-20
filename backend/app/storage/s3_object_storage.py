@@ -8,6 +8,7 @@ if TYPE_CHECKING:
     from types_aiobotocore_s3 import S3Client
 
 RETENTION_DAYS = 7
+ALREADY_CREATED = frozenset({"BucketAlreadyOwnedByYou", "BucketAlreadyExists"})
 
 
 class S3ObjectStorage:
@@ -18,11 +19,16 @@ class S3ObjectStorage:
         self._bucket = bucket
 
     async def ensure_bucket(self) -> None:
-        """Create the bucket and its lifecycle rule when missing."""
+        """Create the bucket and its lifecycle rule when missing.
+
+        Every API process runs this at start, so on a fresh store two of them can race to
+        create the bucket; the loser's "already exists" answer means the bucket is there.
+        """
         try:
             await self._client.head_bucket(Bucket=self._bucket)
         except ClientError:
-            await self._client.create_bucket(Bucket=self._bucket)
+            await self._create_bucket()
+
         await self._client.put_bucket_lifecycle_configuration(
             Bucket=self._bucket,
             LifecycleConfiguration={
@@ -36,6 +42,13 @@ class S3ObjectStorage:
                 ]
             },
         )
+
+    async def _create_bucket(self) -> None:
+        try:
+            await self._client.create_bucket(Bucket=self._bucket)
+        except ClientError as error:
+            if error.response.get("Error", {}).get("Code") not in ALREADY_CREATED:
+                raise
 
     async def put(self, key: str, data: bytes) -> None:
         """Store ``data`` as ``application/pdf``."""

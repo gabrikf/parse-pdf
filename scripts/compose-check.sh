@@ -18,6 +18,7 @@ echo "checkout: git archive $(git -C "$root" rev-parse --short HEAD), .env from 
 
 cd "$checkout"
 docker compose -p "$project" up -d --build --wait --quiet-pull >/dev/null 2>&1
+sleep 15  # a service that crashes right after its first healthy check shows up as restarted
 docker compose -p "$project" ps --format '{{.Service}} {{.Status}}' | sort
 
 python3 - "$project" <<'PY'
@@ -31,8 +32,11 @@ for service in ("api", "worker"):
     failed |= any(value != "service_healthy" for value in conditions.values())
 states = subprocess.run(["docker", "compose", "-p", sys.argv[1], "ps", "--format", "json"], capture_output=True, text=True, check=True).stdout
 health = {json.loads(line)["Service"]: json.loads(line)["Health"] for line in states.splitlines() if line.strip()}
+ids = {json.loads(line)["Service"]: json.loads(line)["ID"] for line in states.splitlines() if line.strip()}
 for service in ("redis", "storage", "api", "worker", "web"):
-    failed |= health.get(service) != "healthy"
+    restarts = subprocess.run(["docker", "inspect", "-f", "{{.RestartCount}}", ids.get(service, "missing")], capture_output=True, text=True).stdout.strip()
+    print(f"{service}: {health.get(service)}, restarts {restarts or 'unknown'}")
+    failed |= health.get(service) != "healthy" or restarts != "0"
 print("result:", "FAILED" if failed else "PASSED")
 sys.exit(1 if failed else 0)
 PY
