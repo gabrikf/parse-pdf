@@ -374,6 +374,17 @@ whose outcome only is written down) are kept in `evidence/` in the repository.
   today delimiters and the system message are the only defense.
 - An admin view of `docs:dead` with a bulk retry.
 
+**Frontend**
+
+The brief puts the frontend last and says it is nice to have, so I spent little planning time on
+it: the page is complete and tested, but built with plain CSS and polling rather than the tools I
+would pick for a product.
+
+- Tailwind CSS for the design tokens and layout, and a motion library for transitions (cards
+  arriving, the progress rings, the sheets opening).
+- The Vercel AI SDK for agent-first features: streaming each summary as it is written, and a chat
+  over a document's pages ("what does page 4 say about fees?").
+
 **Running it for real**
 
 - **Deploy, then measure where to scale.** The API is stateless and the workers scale on their
