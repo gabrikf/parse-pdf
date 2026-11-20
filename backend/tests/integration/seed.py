@@ -48,10 +48,12 @@ async def seed(
     *,
     pages: list[str] | None = None,
     summary: str = "A summary.",
+    parser: ParserKind = ParserKind.PYPDF,
+    page_count: int = 1,
 ) -> Document:
     """Create a document and drive it to ``status`` through the real scripts."""
     repository = RedisDocumentRepository(redis)
-    document = draft(session_id, index)
+    document = draft(session_id, index, parser=parser, page_count=page_count)
     if status is DocumentStatus.TOO_LARGE:
         document = draft(session_id, index, status=DocumentStatus.TOO_LARGE)
         await repository.create(document, enqueue=False)

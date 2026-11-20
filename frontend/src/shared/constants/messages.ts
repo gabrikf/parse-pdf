@@ -20,6 +20,12 @@ export const DEAD_REASON: Record<string, string> = {
   unreadable_pdf: "This PDF couldn't be read.",
 }
 
+/**
+ * The `no_text` card's hint, in the page's words: the API's `hint` names the parser by its id
+ * for API clients, and the page names it as the parser select does (AD-039).
+ */
+export const NO_TEXT_HINT = 'This usually means a scanned PDF or a photo of a page. Gemini 3.1 Flash Lite reads scanned pages.'
+
 export const PASSWORD_CODES = new Set(['password_required', 'wrong_password'])
 
 export function rejectionReason(code: string, fallback: string): string {

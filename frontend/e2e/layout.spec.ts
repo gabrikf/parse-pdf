@@ -1,7 +1,7 @@
 import { expect, test } from '@playwright/test'
 
 import { card, expectStatus, openApp, openUpload, shot, upload, uploadAndWait } from './support/app'
-import { sample, SAMPLE, tooLargeFile } from './support/files'
+import { pdfFile, sample, SAMPLE, tooLargeFile } from './support/files'
 
 const MIN_TARGET = 44
 const TARGETS = 'button, a[href], select, input:not([type="radio"]):not([type="file"]), label:has(input[type="radio"])'
@@ -42,7 +42,10 @@ test('no horizontal scroll and touch targets are at least 44 px', async ({ page 
 })
 
 test('wide screens show both rails with the budget and phones a tab bar', async ({ page }, info) => {
+  const budgetAnswer = page.waitForResponse((response) => response.url().endsWith('/api/v1/budget') && response.ok())
   await openApp(page)
+  const budget = (await (await budgetAnswer).json()).data as { used: number; limit: number }
+  const budgetText = `${budget.used.toLocaleString('en-US')} of ${budget.limit.toLocaleString('en-US')}`
   const width = page.viewportSize()?.width ?? 0
   const navigation = page.getByRole('navigation', { name: 'Main' }).filter({ visible: true })
   const rightRail = page.getByRole('complementary', { name: 'About parsing' })
@@ -50,7 +53,7 @@ test('wide screens show both rails with the budget and phones a tab bar', async 
 
   if (width >= 1024) {
     await expect(rightRail).toBeVisible()
-    await expect(rightRail.getByRole('region', { name: 'Model pages today' })).toContainText(/of 3,000/)
+    await expect(rightRail.getByRole('region', { name: 'Model pages today' })).toContainText(budgetText)
     await expect(rightRail).toContainText('PyPDF')
     const box = await navigation.boundingBox()
     expect(box?.x).toBe(0)
@@ -62,7 +65,7 @@ test('wide screens show both rails with the budget and phones a tab bar', async 
     await expect(rightRail).toBeHidden()
     const box = await navigation.boundingBox()
     expect((box?.y ?? 0) + (box?.height ?? 0)).toBe(page.viewportSize()?.height)
-    await expect(page.getByRole('banner')).toContainText(/of 3,000/)
+    await expect(page.getByRole('banner')).toContainText(budgetText)
   }
   await shot(page, info, 'rails-and-tab-bar')
 })
@@ -78,6 +81,19 @@ test('the stories row shows active documents and hides when empty', async ({ pag
 
   await expectStatus(page, SAMPLE.dummy, 'ready')
   await expect(stories).toHaveCount(0)
+
+  // Tapping a story scrolls to its card: reparse the oldest card, so it sits below 4 newer ones.
+  await upload(page, ['a.pdf', 'b.pdf', 'c.pdf', 'd.pdf'].map((name) => pdfFile(name, sample(SAMPLE.dummy).buffer)))
+  for (const name of ['a.pdf', 'b.pdf', 'c.pdf', 'd.pdf']) await expectStatus(page, name, 'ready')
+  await card(page, SAMPLE.dummy).getByRole('button', { name: `Reparse ${SAMPLE.dummy}` }).click()
+  const confirm = page.getByRole('alertdialog', { name: `Reparse ${SAMPLE.dummy}?` })
+  await confirm.getByRole('radio', { name: /Gemini 3.1 Flash Lite/ }).check()
+  await confirm.getByRole('button', { name: 'Reparse' }).click()
+  const story = stories.getByRole('button', { name: new RegExp(`^${SAMPLE.dummy}, (queued|processing)$`) })
+  await expect(story).toBeVisible()
+  await page.evaluate(() => window.scrollTo({ top: document.body.scrollHeight }))
+  await story.click()
+  await expect(card(page, SAMPLE.dummy)).toBeInViewport()
 })
 
 test('the theme follows the system and the toggle is remembered', async ({ page }, info) => {

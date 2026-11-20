@@ -59,6 +59,24 @@ describe('useActiveDocuments', () => {
     expect(calls[0]).toBe('/api/v1/documents?state=active&limit=50')
   })
 
+  it('follows next_cursor so 51 active documents all show', async () => {
+    const ids = Array.from({ length: 51 }, (_, index) => `doc-${index}`)
+    const { calls } = mockFetch((url) =>
+      url.includes('cursor=page-2')
+        ? envelope([makeDocument({ id: 'doc-50' })], { next_cursor: null })
+        : envelope(ids.slice(0, 50).map((id) => makeDocument({ id })), { next_cursor: 'page-2' }),
+    )
+    const { result } = renderHook(() => useActiveDocuments(true), { wrapper })
+
+    await advance(0)
+
+    expect(result.current.data?.map((document) => document.id)).toEqual(ids)
+    expect(calls).toEqual([
+      '/api/v1/documents?state=active&limit=50',
+      '/api/v1/documents?state=active&limit=50&cursor=page-2',
+    ])
+  })
+
   it('refetches the feed when a document leaves the active list', async () => {
     const { calls } = mockFetch(activeRounds([['a', 'b'], ['a', 'b'], ['b']]))
     renderHook(

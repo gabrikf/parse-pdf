@@ -7,6 +7,10 @@ from redis.asyncio import Redis
 from types_aiobotocore_s3 import S3Client
 
 from app.core.settings import Settings
+from app.documents.domain.document_status import DocumentStatus
+from app.documents.domain.page import Page, PageFormat
+from app.documents.domain.parser_kind import ParserKind
+from app.repositories.document_repository import FinalResult
 from app.repositories.redis_document_repository import RedisDocumentRepository
 from tests.integration.harness import pdf_part, upload
 from tests.pdf_factory import make_pdf
@@ -41,12 +45,33 @@ async def test_a_status_change_refreshes_the_ttl(
     for key in await _document_and_session_keys(redis):
         await redis.expire(key, 100)
     run_id = str(await redis.hget(f"doc:{document_id}", "run_id"))
+    repository = RedisDocumentRepository(redis)
 
-    await RedisDocumentRepository(redis).begin_run(document_id, run_id, 5, datetime.now(UTC))
+    await repository.begin_run(document_id, run_id, 5, datetime.now(UTC))
+    await _assert_a_week_after(redis, document_id, "processing")
 
-    assert await redis.hget(f"doc:{document_id}", "status") == "processing"
-    for key in await _document_and_session_keys(redis):
-        assert await redis.ttl(key) >= WEEK_S - 5, key
+    page = Page(number=1, content="alpha", format=PageFormat.TEXT)
+    result = FinalResult(status=DocumentStatus.READY, pages=[page], summary="A summary.")
+    assert await repository.finalize(document_id, run_id, result, datetime.now(UTC))
+    await _assert_a_week_after(redis, document_id, "ready")
+
+    document = await repository.get(document_id)
+    assert document is not None
+    restarted = await repository.restart_run(
+        document, frozenset({DocumentStatus.READY}), ParserKind.PYPDF, "run-2", datetime.now(UTC)
+    )
+    assert restarted is not None
+    await _assert_a_week_after(redis, document_id, "queued")
+
+
+async def _assert_a_week_after(redis: Redis, document_id: str, status: str) -> None:
+    """The status changed, and every key's TTL is back to a week; then shorten them again."""
+    assert await redis.hget(f"doc:{document_id}", "status") == status
+    keys = await _document_and_session_keys(redis)
+    for key in keys:
+        assert await redis.ttl(key) >= WEEK_S - 5, (status, key)
+    for key in keys:
+        await redis.expire(key, 100)
 
 
 async def test_bucket_expires_objects_after_7_days(

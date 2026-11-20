@@ -61,7 +61,19 @@ test('retry a dead document moves it to the stories row as queued', async ({ pag
   const file = failOnceFile('refused-once.pdf')
   const dead = await uploadAndWait(page, file, 'dead')
   await expect(dead).toContainText('The model provider refused this file.')
+  await expect(dead.getByRole('button').filter({ hasNotText: /^$/ })).toHaveText(['Retry', 'Reparse with another parser', 'Delete forever'])
   await shot(page, info, 'dead-card')
+
+  for (const [button, title] of [
+    ['Reparse with another parser', `Reparse ${file.name}?`],
+    ['Delete forever', `Delete ${file.name} forever?`],
+  ] as const) {
+    await dead.getByRole('button', { name: button }).click()
+    const asked = page.getByRole('alertdialog', { name: title })
+    await expect(asked).toBeVisible()
+    await asked.getByRole('button', { name: 'Cancel' }).click()
+    await expect(asked).toHaveCount(0)
+  }
 
   await dead.getByRole('button', { name: 'Retry' }).click()
   const confirm = page.getByRole('alertdialog', { name: `Retry ${file.name}?` })

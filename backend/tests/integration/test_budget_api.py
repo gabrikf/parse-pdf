@@ -1,4 +1,4 @@
-"""Criterion 45: the daily model page budget, on upload, reparse and the next UTC day."""
+"""Criterion 45: the daily model page budget, on upload, reparse, requeue and the next UTC day."""
 
 from datetime import UTC, datetime, timedelta
 
@@ -6,6 +6,7 @@ import httpx
 from redis.asyncio import Redis
 
 from app.documents.domain.document_status import DocumentStatus
+from app.documents.domain.parser_kind import ParserKind
 from app.rate_limit.redis_model_budget import RedisModelBudget
 from tests.fakes import FakeClock
 from tests.integration.harness import pdf_part, upload
@@ -80,6 +81,38 @@ async def test_reparse_past_the_budget_is_429(
     assert response.status_code == 429
     assert response.json()["error"]["code"] == "model_budget_exhausted"
     assert await redis.hget(f"doc:{document.id}", "status") == "ready"
+
+
+async def test_requeue_of_a_model_document_past_the_budget_is_429(
+    session_client: httpx.AsyncClient, redis: Redis
+) -> None:
+    session_id = await _session_id(session_client)
+    document = await seed(
+        redis, session_id, 0, DocumentStatus.DEAD, parser=ParserKind.GPT5_MINI, page_count=10
+    )
+    await redis.set(_today_key(), 2991)
+
+    response = await session_client.post(f"/api/v1/documents/{document.id}/requeue")
+
+    assert response.status_code == 429
+    assert response.json()["error"]["code"] == "model_budget_exhausted"
+    assert await redis.hget(f"doc:{document.id}", "status") == "dead"
+    assert await redis.get(_today_key()) == "2991"
+
+
+async def test_requeue_of_a_model_document_counts_its_pages(
+    session_client: httpx.AsyncClient, redis: Redis
+) -> None:
+    session_id = await _session_id(session_client)
+    document = await seed(
+        redis, session_id, 0, DocumentStatus.DEAD, parser=ParserKind.GEMINI, page_count=10
+    )
+    await redis.set(_today_key(), 2990)
+
+    response = await session_client.post(f"/api/v1/documents/{document.id}/requeue")
+
+    assert response.status_code == 202, response.text
+    assert await redis.get(_today_key()) == "3000"
 
 
 async def test_next_utc_day_starts_at_0(redis: Redis) -> None:

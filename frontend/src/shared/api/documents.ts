@@ -11,6 +11,18 @@ export function listDocuments(state: FeedState, cursor: string | null, limit = F
   return request<DocumentDto[]>(`/documents?${query.toString()}`)
 }
 
+/** Every document in `state`, following `next_cursor` page by page until it is null. */
+export async function listAllDocuments(state: FeedState, limit: number) {
+  const documents: DocumentDto[] = []
+  let cursor: string | null = null
+  do {
+    const page = await listDocuments(state, cursor, limit)
+    documents.push(...page.data)
+    cursor = page.meta.next_cursor ?? null
+  } while (cursor)
+  return documents
+}
+
 export function getPages(id: string, offset: number, limit = PAGES_PAGE_SIZE) {
   const query = new URLSearchParams({ offset: String(offset), limit: String(limit) })
   return request<PageDto[]>(`/documents/${encodeURIComponent(id)}/pages?${query.toString()}`)

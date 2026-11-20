@@ -62,10 +62,11 @@ export function FileRow({ item, onRemove, onUnlock }: FileRowProps) {
               type="password"
               autoComplete="off"
               placeholder="Password"
+              required
               value={password}
               onChange={(event) => setPassword(event.target.value)}
             />
-            <Button type="submit" variant="primary" disabled={!password}>
+            <Button type="submit" variant="primary">
               Unlock
             </Button>
           </div>

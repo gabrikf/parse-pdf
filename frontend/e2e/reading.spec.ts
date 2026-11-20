@@ -29,7 +29,9 @@ test('a no_text card shows its hint and reparses with gemini', async ({ page }, 
   const scanned = await uploadAndWait(page, sample(SAMPLE.scanned), 'no_text')
 
   await expect(scanned).toContainText('No text found on any page.')
-  await expect(scanned).toContainText('Try the gemini-3.1-flash-lite parser, which reads scans.')
+  await expect(scanned).toContainText(
+    'This usually means a scanned PDF or a photo of a page. Gemini 3.1 Flash Lite reads scanned pages.',
+  )
   await shot(page, info, 'no-text-card')
 
   await scanned.getByRole('button', { name: 'Reparse with Gemini' }).click()
@@ -48,11 +50,16 @@ test('copy summary copies the markdown and shows copied', async ({ page }, info)
   const ready = await uploadAndWait(page, sample(SAMPLE.dummy))
 
   await ready.getByRole('button', { name: `Copy summary of ${SAMPLE.dummy}` }).click()
+  const clickedAt = Date.now()
   await expect(ready.getByRole('status')).toHaveText('Copied')
   const copied = await page.evaluate(() => navigator.clipboard.readText())
   expect(copied).toContain('### Key points')
   expect(copied).toContain('- Rendered as markdown')
   await shot(page, info, 'copy-summary')
 
+  // "Copied" stays for 2 s: it clears between 1.5 s and 2.5 s after the click.
   await expect(card(page, SAMPLE.dummy).getByRole('status')).toHaveText('', { timeout: 4_000 })
+  const shownFor = Date.now() - clickedAt
+  expect(shownFor).toBeGreaterThanOrEqual(1_500)
+  expect(shownFor).toBeLessThanOrEqual(2_500)
 })

@@ -12,6 +12,36 @@ from app.rate_limit.model_budget import ModelBudget
 from app.repositories.document_repository import DocumentRepository
 
 
+class BudgetedRestart:
+    """Reserve the model pages a new run will send, then restart it; release them if it loses.
+
+    Every rerun parses every page again (the chunk checkpoints are cleared), so a model parser
+    counts the whole document against the daily budget each time.
+    """
+
+    def __init__(self, repository: DocumentRepository, budget: ModelBudget, clock: Clock) -> None:
+        self._repository = repository
+        self._budget = budget
+        self._clock = clock
+
+    async def __call__(
+        self, document: Document, allowed: frozenset[DocumentStatus], parser: ParserKind
+    ) -> Document:
+        """Return the queued document, or raise when the budget or the status refuses it."""
+        reserved = parser.uses_model
+        if reserved and not await self._budget.reserve(document.page_count):
+            raise ModelBudgetExhaustedError
+
+        queued = await self._repository.restart_run(
+            document, allowed, parser, new_id(), self._clock.now()
+        )
+        if queued is None:
+            if reserved:
+                await self._budget.release(document.page_count)
+            raise DocumentBusyError
+        return queued
+
+
 class ReparseDocumentUseCase:
     """Queue a ``ready``, ``no_text`` or ``dead`` document again with any parser.
 
@@ -21,47 +51,26 @@ class ReparseDocumentUseCase:
 
     def __init__(self, repository: DocumentRepository, budget: ModelBudget, clock: Clock) -> None:
         self._repository = repository
-        self._budget = budget
-        self._clock = clock
+        self._restart = BudgetedRestart(repository, budget, clock)
 
     async def execute(self, session_id: str, document_id: str, parser: ParserKind) -> Document:
         """Return the queued document."""
         document = await load_owned(self._repository, document_id, session_id)
         ensure_reparsable(document.status)
 
-        reserved = parser.uses_model
-        if reserved and not await self._budget.reserve(document.page_count):
-            raise ModelBudgetExhaustedError
-
-        queued = await self._repository.restart_run(
-            document, REPARSABLE, parser, new_id(), self._clock.now()
-        )
-        if queued is None:
-            if reserved:
-                await self._budget.release(document.page_count)
-            raise DocumentBusyError
-        return queued
+        return await self._restart(document, REPARSABLE, parser)
 
 
 class RequeueDocumentUseCase:
-    """Retry a ``dead`` document with the parser it already has."""
+    """Retry a ``dead`` document with the parser it already has, inside the daily budget."""
 
-    def __init__(self, repository: DocumentRepository, clock: Clock) -> None:
+    def __init__(self, repository: DocumentRepository, budget: ModelBudget, clock: Clock) -> None:
         self._repository = repository
-        self._clock = clock
+        self._restart = BudgetedRestart(repository, budget, clock)
 
     async def execute(self, session_id: str, document_id: str) -> Document:
         """Return the queued document."""
         document = await load_owned(self._repository, document_id, session_id)
         ensure_requeueable(document.status)
 
-        queued = await self._repository.restart_run(
-            document,
-            frozenset({DocumentStatus.DEAD}),
-            document.parser,
-            new_id(),
-            self._clock.now(),
-        )
-        if queued is None:
-            raise DocumentBusyError
-        return queued
+        return await self._restart(document, frozenset({DocumentStatus.DEAD}), document.parser)

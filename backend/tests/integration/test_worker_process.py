@@ -13,6 +13,7 @@ import pytest
 from redis.asyncio import Redis
 
 from app.core.settings import Settings
+from app.worker.heartbeat import STALE_AFTER_S, is_fresh
 from tests.conftest import TEST_REDIS_URL, TEST_S3_URL, TEST_SECRET
 from tests.integration.harness import pdf_part, upload
 from tests.integration.stub_server import running_stub
@@ -112,5 +113,10 @@ async def test_sigterm_exits_cleanly_and_heartbeat_goes_stale(
     finally:
         worker.kill()
 
+    last_beat = heartbeat.read_text()
+    await asyncio.sleep(1.5)
+
     assert fresh.returncode == 0
     assert code == 0
+    assert heartbeat.read_text() == last_beat
+    assert not is_fresh(heartbeat, float(last_beat) + STALE_AFTER_S)

@@ -89,6 +89,7 @@ Proof: run backend | test_unknown_state_is_422 PASSED
 Proof: run backend | test_11th_upload_in_60s_is_429_rate_limited PASSED
 Proof: run backend | test_third_upload_in_flight_is_429 PASSED
 Proof: run backend | test_21st_session_from_one_ip_within_60s_is_429 PASSED
+Proof: `scripts/proofs/session-limit.sh`
 
 **C18** - `Origin` equal to `PAGE_ORIGIN` is echoed with credentials; any other origin gets no `Access-Control-Allow-Origin`; never `*` (AC 18)
 Proof: run backend | test_cors_echoes_page_origin_with_credentials PASSED
@@ -192,6 +193,7 @@ Proof: run backend | test_stale_run_and_deleted_document_are_dropped PASSED
 Proof: run backend | test_stop_signal_lets_the_running_job_finish PASSED
 Proof: run backend | test_job_past_the_grace_stays_pending_for_reclaim PASSED
 Proof: run backend | test_sigterm_exits_cleanly_and_heartbeat_goes_stale PASSED
+Proof: run backend | test_entry_read_after_the_stop_signal_stays_pending_with_no_calls PASSED
 
 **C41** - A heartbeat 29 s old is healthy, 31 s old, missing or garbled is unhealthy; the healthcheck command exits 0 and 1 accordingly (AC 41)
 Proof: run backend | test_29s_old_is_fresh_and_31s_old_is_stale PASSED
@@ -217,6 +219,8 @@ Proof: run backend | test_resumed_job_sends_only_missing_chunks PASSED
 Proof: run backend | test_2990_used_plus_10_pages_is_accepted_and_reaches_3000 PASSED
 Proof: run backend | test_2990_used_plus_11_pages_is_refused_and_not_stored PASSED
 Proof: run backend | test_reparse_past_the_budget_is_429 PASSED
+Proof: run backend | test_requeue_of_a_model_document_past_the_budget_is_429 PASSED
+Proof: run backend | test_requeue_of_a_model_document_counts_its_pages PASSED
 Proof: run backend | test_next_utc_day_starts_at_0 PASSED
 Proof: run backend | test_each_summary_adds_one_budget_page PASSED
 Proof: run backend | test_pypdf_is_never_refused_by_the_budget PASSED
@@ -333,6 +337,7 @@ Proof: run e2e | ✓ copy summary copies the markdown and shows copied
 
 **C72** - The feed opens on "Parsed" (`state=parsed`); "Failed" shows `dead` and `too_large`; "All" shows every document newest first; each chip shows its count; chips never filter the stories row; the choice resets on each visit, as `captures/PhoneFailed.png` draws (AC 72)
 Proof: run e2e | ✓ parsed, failed and all chips filter the feed with counts
+Proof: run web | ✓ follows next_cursor so 51 active documents all show
 Proof: browser - select Failed at 375 x 812, save `captures/PhoneFailed.running.png`
 
 **C73** - A `dead` card offers "Retry", "Reparse with another parser" and "Delete forever"; a `too_large` card only "Delete forever"; each opens its own confirmation naming the file; "Delete forever" says it cannot be undone in the danger color; a confirmed retry moves the card to the stories row as queued, as `captures/PhoneDelete.png` draws (AC 73)
@@ -421,7 +426,7 @@ Proof: run backend | test_ensure_bucket_twice_in_a_row_is_a_no_op PASSED
 ## Handoff
 
 - **Settled mid-build:** none
-- **Dispatched:** none yet
+- **Dispatched:** Verifier at `19cf1ff`, returned; screens round 1 at `19cf1ff`, returned
 - **Boundary:** S1-S5 committed in 0967d3c (AD-033), C82 in a5244c8, C1's clean-checkout record in a5f5361; S6 (C54-C73) and S7 (C74-C80) committed after them; every slice pushed to `origin/main`
 - **Abandoned:** a `ProcessPoolExecutor` for inspection and parsing (it cannot kill a hung child; AD-026); `--reporter=list` on the e2e Run line (a CLI reporter replaces the config's, so no HTML report was written: the Run line now uses the config's list and HTML reporters); the stub's fail-once keyed on the whole text (a retried document's summary call was refused again; AD-034)
 - **Walked:** on the Vite dev server (`.claude/launch.json`, port 5180, `/api` proxied to the e2e stack) by `frontend/captures/running.capture.ts` at each frame's size, every state reached from the one route `/`: empty feed (first visit) -> upload dialog with 3 files, 1 refused ("Upload PDFs" in the rail or tab bar) -> stories row with 2 active files -> Parsed feed with a ready, a no_text and a ready card -> pages sheet ("View all 85 pages") -> reparse confirmation (the card's reparse icon) -> Failed chip with a dead and a too_large card -> Delete forever confirmation (the dead card's button); each state saved as `captures/<Frame>.running.png` and compared with its frame by eye before commit (the reparse parser rows and the upload dialog's "Add more files" were fixed to match)

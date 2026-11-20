@@ -1,0 +1,4 @@
+limit 1000; 1001 sessions, each with a new first hop: {201: 977, 429: 24}
+the last of them: 429
+one more with an unused first hop: 429
+result: PASSED

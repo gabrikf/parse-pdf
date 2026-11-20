@@ -1,5 +1,6 @@
 import { PARSER, type DocumentDto } from '../../../../../../../shared/api/types'
 import { Button } from '../../../../../../../shared/components/Button'
+import { NO_TEXT_HINT } from '../../../../../../../shared/constants/messages'
 import { ACTION, type CardHandlers } from '../../../types'
 import styles from '../DocumentCard.module.css'
 
@@ -8,7 +9,7 @@ export function NoTextBody({ document, handlers }: { document: DocumentDto; hand
   return (
     <div className={styles.panel}>
       <p>
-        <strong>No text found on any page.</strong> {document.hint ?? 'This usually means a scanned PDF or a photo of a page. Gemini 3.1 Flash Lite reads scanned pages.'}
+        <strong>No text found on any page.</strong> {NO_TEXT_HINT}
       </p>
       <div className={styles.buttons}>
         <Button variant="primary" onClick={() => handlers.onAsk(ACTION.reparse, document, PARSER.gemini)}>

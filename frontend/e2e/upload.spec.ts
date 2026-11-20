@@ -1,6 +1,6 @@
 import { expect, test, type Page } from '@playwright/test'
 
-import { card, chip, expectStatus, openApp, openUpload, pickFiles, shot, upload } from './support/app'
+import { card, chip, expectStatus, openApp, openUpload, pickFiles, shot, upload, uploadAndWait } from './support/app'
 import { lockedSamplePassword, pdfFile, sample, SAMPLE, type FilePayload } from './support/files'
 
 const BYTES = /^\d+ [KM]?B$/
@@ -30,6 +30,14 @@ test('first visit creates a session and shows the empty feed', async ({ page, co
   const again = (await context.cookies()).find((item) => item.name === 'pp_session')
   expect(again?.value).toBe(cookie?.value)
   await shot(page, info, 'first-visit')
+
+  // Newest first: the second upload's card comes before the first's.
+  const first = pdfFile('older.pdf', sample(SAMPLE.dummy).buffer)
+  const second = pdfFile('newer.pdf', sample(SAMPLE.dummy).buffer)
+  await uploadAndWait(page, first)
+  await uploadAndWait(page, second)
+  const names = await page.getByRole('main').getByRole('article').evaluateAll((items) => items.map((item) => item.getAttribute('aria-label')))
+  expect(names).toEqual([second.name, first.name])
 })
 
 test('the parser select offers exactly three parsers with pypdf selected', async ({ page }, info) => {

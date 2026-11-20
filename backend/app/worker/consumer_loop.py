@@ -52,8 +52,12 @@ class ConsumerLoop:
                 log.exception("read_failed")
                 await asyncio.sleep(ERROR_PAUSE_S)
                 continue
-            if job is not None:
-                await self._run_with_grace(job, stop)
+            if job is None:
+                continue
+            if stop.is_set():
+                log.info("job_left_for_reclaim", document_id=job.document_id)
+                return
+            await self._run_with_grace(job, stop)
 
     async def _next_job(self) -> Job | None:
         if time.monotonic() >= self._next_sweep:

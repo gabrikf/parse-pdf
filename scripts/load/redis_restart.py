@@ -2,7 +2,8 @@
 
 Workers are stopped so the 5 uploads stay ``queued``; Redis restarts (AOF on); the first API
 request after Redis is healthy again must not be a 5xx; workers start; all 5 must reach
-``ready``. Exit 0 only when that holds.
+``ready``. Then Redis restarts again under the running workers, and 5 new uploads must reach
+``ready`` without a worker restart (the workers reconnect). Exit 0 only when both hold.
 
     .venv/bin/python scripts/load/redis_restart.py --base http://localhost:8081
 """
@@ -43,16 +44,42 @@ async def _statuses(client: httpx.AsyncClient, ids: list[str]) -> list[str]:
     return [read.json()["data"]["status"] for read in reads]
 
 
+def _files() -> list[tuple[str, tuple[str, bytes, str]]]:
+    return [
+        ("files", (f"doc-{n}.pdf", SAMPLE.read_bytes(), "application/pdf"))
+        for n in range(DOCUMENTS)
+    ]
+
+
+async def _wait_ready(client: httpx.AsyncClient, ids: list[str]) -> list[str]:
+    deadline = time.monotonic() + READY_TIMEOUT_S
+    statuses = await _statuses(client, ids)
+    while time.monotonic() < deadline and set(statuses) != {"ready"}:
+        await asyncio.sleep(1)
+        statuses = await _statuses(client, ids)
+    return statuses
+
+
+async def workers_reconnect(client: httpx.AsyncClient, project: str) -> bool:
+    """Restart Redis under running workers; 5 uploads made afterwards must reach ``ready``."""
+    compose(project, "restart", "redis")
+    compose(project, "up", "-d", "--wait", "redis")
+    uploaded = await client.post("/api/v1/documents", files=_files(), data={"parser": "pypdf"})
+    report(f"upload with workers left running: {uploaded.status_code}")
+    if uploaded.status_code != 202:
+        return False
+    ids = [item["id"] for item in uploaded.json()["data"]["documents"]]
+    statuses = await _wait_ready(client, ids)
+    report(f"final statuses without a worker restart: {statuses}")
+    return statuses == ["ready"] * DOCUMENTS
+
+
 async def run(base: str, project: str) -> bool:
     """Queue 5, restart Redis, check the first request, then wait for ``ready``."""
     async with httpx.AsyncClient(base_url=base, timeout=60) as client:
         (await client.post("/api/v1/sessions")).raise_for_status()
         compose(project, "stop", "worker")
-        files = [
-            ("files", (f"doc-{n}.pdf", SAMPLE.read_bytes(), "application/pdf"))
-            for n in range(DOCUMENTS)
-        ]
-        uploaded = await client.post("/api/v1/documents", files=files, data={"parser": "pypdf"})
+        uploaded = await client.post("/api/v1/documents", files=_files(), data={"parser": "pypdf"})
         ids = [item["id"] for item in uploaded.json()["data"]["documents"]]
         report(f"uploaded: {uploaded.status_code}, statuses {await _statuses(client, ids)}")
 
@@ -63,17 +90,15 @@ async def run(base: str, project: str) -> bool:
         report(f"statuses after restart: {await _statuses(client, ids)}")
 
         compose(project, "start", "worker")
-        deadline = time.monotonic() + READY_TIMEOUT_S
-        statuses = await _statuses(client, ids)
-        while time.monotonic() < deadline and set(statuses) != {"ready"}:
-            await asyncio.sleep(1)
-            statuses = await _statuses(client, ids)
+        statuses = await _wait_ready(client, ids)
         report(f"final statuses: {statuses}")
+        reconnected = await workers_reconnect(client, project)
 
     return (
         uploaded.status_code == 202
         and first.status_code < 500
         and statuses == ["ready"] * DOCUMENTS
+        and reconnected
     )
 
 

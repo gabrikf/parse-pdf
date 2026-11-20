@@ -190,7 +190,7 @@ carries `X-Request-ID`. Another session's document answers `404 document_not_fou
 | `GET /api/v1/documents/{id}` | | `Document` (`summary` only when `ready`) | `200`, `404`, `401` |
 | `GET /api/v1/documents/{id}/pages` | `offset`, `limit` (1-100, default 50) | `[{number, content, format}]`, `meta.total` | `200`, `409 not_ready`, `404`, `422`, `401` |
 | `POST /api/v1/documents/{id}/reparse` | `{parser}` | `Document` (`queued`) | `202`, `409 document_busy` / `not_reparsable`, `422`, `429 model_budget_exhausted`, `404`, `401` |
-| `POST /api/v1/documents/{id}/requeue` | | `Document` (`queued`) | `202`, `409 document_busy` / `not_dead`, `404`, `401` |
+| `POST /api/v1/documents/{id}/requeue` | | `Document` (`queued`) | `202`, `409 document_busy` / `not_dead`, `429 model_budget_exhausted`, `404`, `401` |
 | `DELETE /api/v1/documents/{id}` | | `{id, deleted: true}` | `200`, `409 document_busy`, `404`, `401` |
 | `GET /api/v1/budget` | | `{used, limit, resets_at}` | `200`, `401` |
 | `GET /api/v1/health/live` | | `{status: "ok"}` | `200` |
@@ -272,14 +272,15 @@ The shared OpenRouter key holds **$5** of credit. A daily budget of **3,000 mode
 day guards it: each page parsed by Gemini 3.1 Flash Lite or GPT-5 Mini counts 1, and each summary
 counts 1. PyPDF parsing never counts and is never refused.
 
-- When the budget is spent, a model-parser upload is refused per file with
+- When the budget is spent, a model-parser upload is refused per file, and a model-parser
+  reparse or retry with `429` (a rerun sends every page again), with
   `model_budget_exhausted` ("Today's model pages are used up. Use PyPDF, or try again after 00:00
   UTC."). The right rail shows how many pages are left.
 - When the key runs out of credit, OpenRouter answers 402 and the document ends `dead` with
   `provider_out_of_credits`. The card says "The shared model key is out of credit. Try PyPDF, or
   come back later." and offers Retry, Reparse with another parser and Delete forever.
 - Rate limits: 10 upload requests per minute and 2 in flight per session; 20 new sessions per
-  minute per IP; 30 OpenRouter calls per minute for all workers together. A `429` carries
+  minute per IP (the address nginx sees: it overwrites any `X-Forwarded-For` the client sends); 30 OpenRouter calls per minute for all workers together. A `429` carries
   `Retry-After`, and the page counts it down.
 - Files: up to 20 per upload, 50 MiB and 1,000 pages each.
 - Everything is deleted after 7 days.

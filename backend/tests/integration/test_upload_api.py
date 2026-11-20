@@ -74,14 +74,18 @@ async def test_20_files_are_accepted(session_client: httpx.AsyncClient) -> None:
 
 
 async def test_21_files_are_422_and_store_nothing(
-    session_client: httpx.AsyncClient, redis: Redis
+    session_client: httpx.AsyncClient, redis: Redis, settings: Settings
 ) -> None:
-    response = await upload(session_client, [pdf_part(f"{i}.pdf", ONE_PAGE) for i in range(21)])
+    async with bucket_client(settings) as s3:
+        before = (await s3.list_objects_v2(Bucket=settings.s3_bucket)).get("KeyCount", 0)
+        response = await upload(session_client, [pdf_part(f"{i}.pdf", ONE_PAGE) for i in range(21)])
+        after = (await s3.list_objects_v2(Bucket=settings.s3_bucket)).get("KeyCount", 0)
 
     assert response.status_code == 422
     assert response.json()["error"]["code"] == "too_many_files"
     assert await _stream_entries(redis) == []
     assert await redis.keys("doc:*") == []
+    assert after == before
 
 
 async def test_bad_files_are_rejected_beside_good_ones(
@@ -197,12 +201,21 @@ async def test_declared_length_over_limit_is_413(session_client: httpx.AsyncClie
 async def test_filename_is_cleaned_and_never_the_key(
     session_client: httpx.AsyncClient, redis: Redis
 ) -> None:
-    response = await upload(session_client, [pdf_part("../../etc/passwd.pdf", ONE_PAGE)])
+    long_name = "a" * 300 + ".pdf"
+    files = [
+        pdf_part("../../etc/passwd.pdf", ONE_PAGE),
+        pdf_part("re\x7fport\u202e.pdf", ONE_PAGE),
+        pdf_part(long_name, ONE_PAGE),
+    ]
+    response = await upload(session_client, files)
 
-    document = response.json()["data"]["documents"][0]
-    assert document["filename"] == "passwd.pdf"
-    entry = (await _stream_entries(redis))[0]
-    assert entry["object_key"] == f"documents/{document['id']}.pdf"
+    documents = response.json()["data"]["documents"]
+    assert [document["filename"] for document in documents[:2]] == ["passwd.pdf", "report.pdf"]
+    assert documents[2]["filename"] == long_name[:255]
+    entries = await _stream_entries(redis)
+    assert {entry["object_key"] for entry in entries} == {
+        f"documents/{document['id']}.pdf" for document in documents
+    }
 
 
 async def test_11th_upload_in_60s_is_429_rate_limited(session_client: httpx.AsyncClient) -> None:

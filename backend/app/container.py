@@ -70,7 +70,7 @@ def build_api_services(
         get_document=GetDocumentUseCase(repository),
         get_pages=GetPagesUseCase(repository),
         reparse=ReparseDocumentUseCase(repository, budget, clock),
-        requeue=RequeueDocumentUseCase(repository, clock),
+        requeue=RequeueDocumentUseCase(repository, budget, clock),
         delete=DeleteDocumentUseCase(repository, storage),
         budget=GetBudgetUseCase(budget),
     )
