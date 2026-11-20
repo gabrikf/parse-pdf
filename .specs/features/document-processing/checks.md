@@ -182,6 +182,7 @@ Proof: run backend | test_claim_refresh_keeps_a_long_job_on_one_worker PASSED
 
 **C37** - The 6th delivery ends `dead` `max_deliveries` with 0 parser or model calls, copies `{document_id, run_id, error_code, deliveries}` to `docs:dead` and acks; the 5th is processed (AC 37)
 Proof: run backend | test_sixth_delivery_is_dead_letter_with_no_calls PASSED
+Proof: run backend | test_a_timed_out_delivery_is_named_when_the_tries_run_out PASSED
 
 **C38** - A redelivered entry whose run is already final is acked with 0 parser and 0 model calls (AC 38)
 Proof: run backend | test_redelivered_final_run_is_acked_with_no_calls PASSED
@@ -288,6 +289,7 @@ Proof: run web | ✓ refetches the feed when a document leaves the active list
 
 **C60** - A `ready` document shows its summary and pages 50 at a time with a control for the next 50; `<script>alert(1)</script>` shows as literal text, as `captures/PhonePages.png` draws (AC 60)
 Proof: run e2e | ✓ the pages sheet shows 50 pages and loads the next 50
+Proof: run e2e | ✓ the pages sheet opens at full height even for one page
 Proof: run web | ✓ markdown shows raw html as literal text
 Proof: browser - open the pages sheet of a ready document at 375 x 812 dark, save `captures/PhonePages.running.png`
 
@@ -297,6 +299,7 @@ Proof: run e2e | ✓ a no_text card shows its hint and reparses with gemini
 **C62** - Reparse, requeue and delete each ask for confirmation naming the file and the action; cancel sends nothing; confirm sends and shows the new status or removes the card, as `captures/PhoneConfirm.png` draws (AC 62)
 Proof: run e2e | ✓ reparse with another parser asks first and cancel sends nothing
 Proof: run e2e | ✓ delete forever removes the card and it stays gone after reload
+Proof: run e2e | ✓ a refused action keeps its confirmation open with the reason and refreshes the feed
 Proof: browser - open the reparse confirmation at 375 x 812, save `captures/PhoneConfirm.running.png`
 
 **C63** - An unreachable API shows an error with a retry control; a `429` shows the wait in seconds from `Retry-After` (AC 63)
