@@ -74,16 +74,17 @@ class OpenRouterChatModel:
         return await self._retry.run(lambda: self._attempt(request))
 
     async def _attempt(self, request: ChatRequest) -> str:
+        deadline = request.timeout_s or self._timeout
         async with self._gate.slot():
             try:
                 # A hard deadline: OpenRouter keeps slow requests alive with whitespace, so a
                 # per-read timeout alone would never fire.
-                async with asyncio.timeout(self._timeout):
+                async with asyncio.timeout(deadline):
                     response = await self._http.post(
                         "/chat/completions",
                         json=self._payload(request),
                         headers={"Authorization": f"Bearer {self._api_key}"},
-                        timeout=self._timeout,
+                        timeout=deadline,
                     )
             except (TimeoutError, httpx.TimeoutException) as exc:
                 raise RetryableError("timeout") from exc

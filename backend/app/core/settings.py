@@ -51,6 +51,13 @@ class Settings(BaseSettings):
     summary_model_id: str = "google/gemini-3.1-flash-lite"
     gemini_parser_model_id: str = "google/gemini-3.1-flash-lite"
     gpt_parser_model_id: str = "openai/gpt-5-mini"
+    # One parse call must finish inside its deadline (AD-055): GPT-5 Mini writes ~60-90 tokens a
+    # second, so it gets 3-page chunks and no reasoning; Gemini does 10 dense pages in ~15 s.
+    gemini_parser_chunk_pages: int = Field(default=10, ge=1, le=10)
+    gpt_parser_chunk_pages: int = Field(default=3, ge=1, le=10)
+    gemini_parser_reasoning_effort: str = "low"
+    gpt_parser_reasoning_effort: str = "minimal"
+    openrouter_parse_timeout_s: float = 120.0
     guardrail_model_id: str = "meta-llama/llama-guard-4-12b"
     # Llama Guard categories that do not block a document (AD-054): S6 specialized advice,
     # S7 privacy, S8 intellectual property. Comma-separated; `none` blocks every category.

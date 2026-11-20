@@ -14,6 +14,7 @@ class ChatRequest:
     plugins: list[dict[str, Any]] = field(default_factory=list)
     max_tokens: int | None = None
     reasoning_effort: str | None = None
+    timeout_s: float | None = None  # overrides the client deadline for this call
 
 
 class ChatModel(Protocol):

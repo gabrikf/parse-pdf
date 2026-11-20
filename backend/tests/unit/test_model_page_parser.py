@@ -160,3 +160,52 @@ def test_page_schema_accepts_fenced_json_and_reorders() -> None:
     )
 
     assert read_chunk_pages(raw, 2) == ["a", "b"]
+
+
+async def test_3_page_chunks_split_10_pages_into_3_3_3_1_in_order() -> None:
+    """A slow model gets smaller chunks so each answer fits its call deadline (AD-055)."""
+    chat = PagesChat()
+    parser = ModelPageParser(chat, IsolatedRunner(1), MODEL, 60, chunk_pages=3)
+
+    pages = await parser.parse(_request(10, MemoryCheckpoint()))
+
+    assert _chunk_sizes(chat) == [3, 3, 3, 1]
+    assert [page.number for page in pages] == list(range(1, 11))
+
+
+async def test_each_chunk_call_carries_the_reasoning_effort_and_call_deadline() -> None:
+    chat = PagesChat()
+    parser = ModelPageParser(
+        chat, IsolatedRunner(1), MODEL, 60, reasoning_effort="minimal", call_timeout_s=120.0
+    )
+
+    await parser.parse(_request(1, MemoryCheckpoint()))
+
+    assert chat.calls[0].reasoning_effort == "minimal"
+    assert chat.calls[0].timeout_s == 120.0
+
+
+async def test_a_resumed_3_page_job_sends_only_the_chunks_left() -> None:
+    chat = PagesChat()
+    checkpoint = MemoryCheckpoint()
+    checkpoint.saved[0] = [Page(n, f"# p{n}", PageFormat.MARKDOWN) for n in (1, 2, 3)]
+    parser = ModelPageParser(chat, IsolatedRunner(1), MODEL, 60, chunk_pages=3)
+
+    pages = await parser.parse(_request(7, checkpoint))
+
+    assert _chunk_sizes(chat) == [3, 1]
+    assert [page.number for page in pages] == list(range(1, 8))
+
+
+async def test_a_checkpoint_saved_under_another_chunk_size_is_parsed_again() -> None:
+    """10-page chunk 0 saved before a deploy cut chunks to 3: it is not reused as pages 1-3."""
+    chat = PagesChat()
+    checkpoint = MemoryCheckpoint()
+    checkpoint.saved[0] = [Page(n, f"# old {n}", PageFormat.MARKDOWN) for n in range(1, 11)]
+    parser = ModelPageParser(chat, IsolatedRunner(1), MODEL, 60, chunk_pages=3)
+
+    pages = await parser.parse(_request(10, checkpoint))
+
+    assert _chunk_sizes(chat) == [3, 3, 3, 1]
+    assert [page.number for page in pages] == list(range(1, 11))
+    assert all("old" not in page.content for page in pages)

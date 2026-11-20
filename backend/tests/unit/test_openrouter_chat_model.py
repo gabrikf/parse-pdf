@@ -235,3 +235,23 @@ async def test_max_tokens_and_reasoning_are_sent_when_set(http: httpx.AsyncClien
     payload = json.loads(route.calls[0].request.content)
     assert payload["max_tokens"] == 10
     assert payload["reasoning"] == {"effort": "low"}
+
+
+async def test_a_request_deadline_overrides_the_client_deadline(http: httpx.AsyncClient) -> None:
+    """A parse call may take longer than a summary call (AD-055): its own deadline wins."""
+
+    calls = 0
+
+    async def slow(_request: httpx.Request) -> httpx.Response:
+        nonlocal calls
+        calls += 1
+        await asyncio.sleep(0.3)
+        return httpx.Response(200, json=OK_BODY)
+
+    model = _model(http, [])
+    model._timeout = 0.1
+    with respx.mock:
+        respx.post(f"{BASE}/chat/completions").mock(side_effect=slow)
+        request = ChatRequest(model="m", messages=[], timeout_s=2.0)
+        assert await model.complete(request) == "hello"
+    assert calls == 1

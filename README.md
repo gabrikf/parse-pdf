@@ -145,11 +145,12 @@ flowchart LR
    `XAUTOCLAIM`; a claim keeper refreshes live claims every 20 s so a long job is never stolen.
 8. The use case starts the run with a `run_id` compare-and-set, so a stale or duplicate entry
    makes no parser or model call.
-9. PyPDF parses in a child process killed at 300 s; the model parsers send 10-page chunks to
-   OpenRouter and checkpoint each chunk.
+9. PyPDF parses in a child process killed at 300 s; the model parsers send chunks to OpenRouter
+   (10 pages for Gemini, 3 for GPT-5 Mini, AD-055) and checkpoint each chunk.
 10. Llama Guard 4 checks the text in 20,000-character pieces, Gemini 3.1 Flash Lite writes the
     summary, and Llama Guard checks the summary. Every call passes the shared rate limiter (30 per
-    minute for all workers) and the retry policy, with a hard 60 s deadline per attempt.
+    minute for all workers) and the retry policy, with a hard deadline per attempt: 120 s for a
+    parse call, 60 s for a summary or guardrail call.
 11. Pages, summary and the final status are saved first; only then is the entry acknowledged and
     deleted. A dead job is copied to `docs:dead`.
 12. The page polls the active documents every 2 s while any is queued or processing.
@@ -249,6 +250,7 @@ The full table, with each decision's rationale and the words that settled it, is
 | AD-026 | PDF inspection and PyPDF parsing run in a one-shot killable child process per call |
 | AD-027 | Llama Guard reads 20,000-character pieces; an unreadable verdict is transient, never a rejection |
 | AD-028 | A hard 60 s deadline on every OpenRouter attempt; capped output tokens |
+| AD-055 | Parse calls are sized to their deadline: GPT-5 Mini reads 3 pages per call with no reasoning, Gemini 10; a parse call may take 120 s, a summary or guardrail call 60 s |
 | AD-029 | One sorted set per feed group per session, moved by the same Lua scripts that change the status |
 | AD-030 | The OpenRouter call limit is configurable; only the e2e stack raises it |
 | AD-031 | `fonttools` added so PyPDF reads CFF fonts |

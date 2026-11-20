@@ -26,12 +26,25 @@ class ModelPageParser:
     """
 
     def __init__(
-        self, chat: ChatModel, runner: IsolatedRunner, model_id: str, split_timeout_s: float
+        self,
+        chat: ChatModel,
+        runner: IsolatedRunner,
+        model_id: str,
+        split_timeout_s: float,
+        *,
+        chunk_pages: int = CHUNK_PAGES,
+        reasoning_effort: str = REASONING_EFFORT,
+        call_timeout_s: float | None = None,
     ) -> None:
         self._chat = chat
         self._runner = runner
         self._model_id = model_id
         self._split_timeout_s = split_timeout_s
+
+        # A slow model gets smaller chunks: its answer for one chunk must fit the call deadline.
+        self._chunk_pages = chunk_pages
+        self._reasoning_effort = reasoning_effort
+        self._call_timeout_s = call_timeout_s
 
     async def parse(self, request: ParseRequest) -> list[Page]:
         """Return one markdown page per PDF page."""
@@ -40,8 +53,8 @@ class ModelPageParser:
 
         pages: list[Page] = []
         for index, (chunk, count) in enumerate(chunks):
-            if index not in done:
-                first = index * CHUNK_PAGES + 1
+            first = index * self._chunk_pages + 1
+            if not _covers(done.get(index), first, count):
                 done[index] = await self._parse_chunk(chunk, count, first)
                 await request.checkpoint.save(index, done[index])
             pages.extend(done[index])
@@ -50,7 +63,7 @@ class ModelPageParser:
     async def _split(self, pdf: bytes) -> list[tuple[bytes, int]]:
         try:
             chunks: list[tuple[bytes, int]] = await self._runner.run(
-                split_pdf, (pdf, CHUNK_PAGES), self._split_timeout_s
+                split_pdf, (pdf, self._chunk_pages), self._split_timeout_s
             )
         except IsolatedTimeoutError as exc:
             raise PermanentFailure("parse_timeout") from exc
@@ -65,7 +78,8 @@ class ModelPageParser:
             response_format=pages_schema(),
             plugins=[FILE_PARSER_PLUGIN],
             max_tokens=CHUNK_MAX_TOKENS,
-            reasoning_effort=REASONING_EFFORT,
+            reasoning_effort=self._reasoning_effort,
+            timeout_s=self._call_timeout_s,
         )
         for _ in range(CHUNK_ATTEMPTS):
             texts = read_chunk_pages(await self._chat.complete(request), count)
@@ -75,3 +89,14 @@ class ModelPageParser:
                     for offset, text in enumerate(texts)
                 ]
         raise PermanentFailure("model_output_invalid")
+
+
+def _covers(saved: list[Page] | None, first: int, count: int) -> bool:
+    """A checkpoint is reused only if it holds exactly this chunk's pages.
+
+    A job saved under another chunk size (a deploy changed it) would otherwise repeat or skip
+    pages, so a mismatched chunk is parsed again.
+    """
+    if saved is None:
+        return False
+    return [page.number for page in saved] == list(range(first, first + count))

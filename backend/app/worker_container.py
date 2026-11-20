@@ -68,10 +68,22 @@ def build_worker_parts(
         {
             ParserKind.PYPDF: PypdfPageParser(runner, timeout),
             ParserKind.GEMINI: ModelPageParser(
-                chat, runner, settings.gemini_parser_model_id, timeout
+                chat,
+                runner,
+                settings.gemini_parser_model_id,
+                timeout,
+                chunk_pages=settings.gemini_parser_chunk_pages,
+                reasoning_effort=settings.gemini_parser_reasoning_effort,
+                call_timeout_s=settings.openrouter_parse_timeout_s,
             ),
             ParserKind.GPT5_MINI: ModelPageParser(
-                chat, runner, settings.gpt_parser_model_id, timeout
+                chat,
+                runner,
+                settings.gpt_parser_model_id,
+                timeout,
+                chunk_pages=settings.gpt_parser_chunk_pages,
+                reasoning_effort=settings.gpt_parser_reasoning_effort,
+                call_timeout_s=settings.openrouter_parse_timeout_s,
             ),
         }
     )
