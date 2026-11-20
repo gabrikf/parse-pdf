@@ -1,4 +1,4 @@
-import { Check, LoaderCircle, LockKeyhole, TriangleAlert, X } from 'lucide-react'
+import { Check, LoaderCircle, Lock, TriangleAlert, X } from 'lucide-react'
 import { useId, useState } from 'react'
 
 import { Button } from '../../../../../shared/components/Button'
@@ -16,7 +16,7 @@ interface FileRowProps {
 function StateIcon({ item }: { item: SelectedFile }) {
   if (item.state === FILE_STATE.accepted) return <Check size={20} color="var(--ok)" aria-label="Uploaded" />
   if (item.state === FILE_STATE.sending) return <LoaderCircle size={20} color="var(--muted)" aria-label="Sending" />
-  if (item.code && PASSWORD_CODES.has(item.code)) return <LockKeyhole size={20} color="var(--warn)" aria-label="Locked" />
+  if (item.code && PASSWORD_CODES.has(item.code)) return <Lock size={20} color="var(--warn)" aria-label="Locked" />
   if (item.state === FILE_STATE.rejected) return <TriangleAlert size={20} color="var(--danger)" aria-label="Refused" />
   return null
 }
