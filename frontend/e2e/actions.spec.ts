@@ -1,7 +1,7 @@
 import { expect, test } from '@playwright/test'
 
 import { card, chip, expectStatus, openApp, shot, upload, uploadAndWait } from './support/app'
-import { failOnceFile, sample, SAMPLE, tooLargeFile } from './support/files'
+import { failOnceFile, sample, SAMPLE, tooLargeFile, unsafeFile } from './support/files'
 
 test('reparse with another parser asks first and cancel sends nothing', async ({ page }, info) => {
   await openApp(page)
@@ -78,6 +78,16 @@ test('a refused action keeps its confirmation open with the reason and refreshes
 
   await confirm.getByRole('button', { name: 'Cancel' }).click()
   await expect(confirm).toBeHidden()
+})
+
+test('a document the safety check flags says which category, not only that it failed', async ({ page }, info) => {
+  await openApp(page)
+  const dead = await uploadAndWait(page, unsafeFile('flagged.pdf'), 'dead')
+
+  await expect(dead).toContainText(
+    "The safety check flagged the document's text for violent crimes (S1), so no summary was written.",
+  )
+  await shot(page, info, 'dead-card-guardrail-hint')
 })
 
 test('retry a dead document moves it to the stories row as queued', async ({ page }, info) => {

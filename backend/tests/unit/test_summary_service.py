@@ -100,6 +100,10 @@ async def test_unsafe_input_is_rejected_without_a_summary_call() -> None:
         await _service(chat).summarize(_pages(10))
 
     assert caught.value.code == "guardrail_rejected"
+    assert caught.value.hint == (
+        "The safety check flagged the document's text for violent crimes (S1), so no summary "
+        "was written. A retry with the same text will most likely be flagged again."
+    )
     assert chat.calls_to(SUMMARY_MODEL) == []
 
 
@@ -115,6 +119,10 @@ async def test_unsafe_summary_is_rejected() -> None:
     with pytest.raises(PermanentFailure) as caught:
         await _service(UnsafeOutput()).summarize(_pages(10))
     assert caught.value.code == "guardrail_rejected"
+    assert caught.value.hint is not None
+    assert caught.value.hint.startswith(
+        "The safety check flagged the written summary for non-violent crimes (S2)"
+    )
 
 
 async def test_each_summary_adds_one_budget_page() -> None:
@@ -154,6 +162,21 @@ async def test_guard_blocks_any_category_outside_the_allowed_ones(verdict: str) 
     guard = LlamaGuard(FakeChat(guard_verdict=verdict), GUARD_MODEL, DOCUMENT_CATEGORIES)
 
     assert await guard.is_safe("x") is False
+
+
+async def test_guard_verdict_carries_every_category_named() -> None:
+    guard = LlamaGuard(FakeChat(guard_verdict="unsafe\nS6,S1"), GUARD_MODEL, DOCUMENT_CATEGORIES)
+
+    verdict = await guard.check("x")
+
+    assert verdict.safe is False
+    assert verdict.categories == frozenset({"S1", "S6"})
+
+
+async def test_guard_safe_verdict_names_no_category() -> None:
+    verdict = await LlamaGuard(FakeChat(guard_verdict="safe"), GUARD_MODEL).check("x")
+
+    assert (verdict.safe, verdict.categories) == (True, frozenset())
 
 
 async def test_guard_with_no_allowed_categories_blocks_specialized_advice() -> None:

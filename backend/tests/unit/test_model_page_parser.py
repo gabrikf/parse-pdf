@@ -209,3 +209,56 @@ async def test_a_checkpoint_saved_under_another_chunk_size_is_parsed_again() -> 
     assert _chunk_sizes(chat) == [3, 3, 3, 1]
     assert [page.number for page in pages] == list(range(1, 11))
     assert all("old" not in page.content for page in pages)
+
+
+async def test_a_retry_tells_the_model_what_its_last_answer_got_wrong() -> None:
+    """AD-056: the second call carries the reason, in chunk-local page numbers."""
+    missing_page_2 = json.dumps({"pages": [{"number": 1, "markdown": "a"}]})
+    chat = PagesChat(bad_answers=[missing_page_2])
+
+    pages = await _parser(chat).parse(_request(2, MemoryCheckpoint()))
+
+    first, retry = chat.calls
+    assert len(first.messages) == 2
+    assert retry.messages[:2] == first.messages
+    assert retry.messages[2] == {
+        "role": "user",
+        "content": (
+            "Your previous answer had the wrong pages: page 2 was missing. The attached PDF has "
+            "2 pages: return exactly one item for each page number from 1 to 2, in order, each "
+            "number once."
+        ),
+    }
+    assert [page.number for page in pages] == [1, 2]
+
+
+async def test_each_retry_carries_only_the_latest_problem() -> None:
+    chat = PagesChat(bad_answers=["not json", "{}"])
+
+    await _parser(chat).parse(_request(2, MemoryCheckpoint()))
+
+    second, third = chat.calls[1], chat.calls[2]
+    assert len(second.messages) == len(third.messages) == 3
+    assert second.messages[2]["content"].startswith("Your previous answer was not valid JSON")
+    assert third.messages[2]["content"].startswith(
+        "Your previous answer was JSON but not in the required shape"
+    )
+
+
+async def test_after_3_wrong_answers_the_hint_names_the_document_pages_and_the_problem() -> None:
+    """Chunk 2 of a 5-page job under 3-page chunks is pages 4-5; its page 2 is page 5."""
+    only_page_1 = json.dumps({"pages": [{"number": 1, "markdown": "a"}]})
+    chat = PagesChat(bad_answers=[])
+    parser = ModelPageParser(chat, IsolatedRunner(1), MODEL, 60, chunk_pages=3)
+    checkpoint = MemoryCheckpoint()
+    checkpoint.saved[0] = [Page(n, f"# p{n}", PageFormat.MARKDOWN) for n in (1, 2, 3)]
+    chat.bad_answers.extend([only_page_1] * 3)
+
+    with pytest.raises(PermanentFailure) as caught:
+        await parser.parse(_request(5, checkpoint))
+
+    assert caught.value.code == "model_output_invalid"
+    assert caught.value.hint == (
+        "The model's answer for pages 4-5 didn't match the PDF after 3 tries: page 5 was "
+        "missing. Retry, or reparse with another parser."
+    )

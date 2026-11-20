@@ -20,5 +20,5 @@ GET fetch http://localhost:8081/api/v1/documents
 GET fetch http://localhost:8081/api/v1/documents
 GET fetch http://localhost:8081/api/v1/documents
 GET fetch http://localhost:8081/api/v1/budget
-GET fetch http://localhost:8081/api/v1/documents/b6ce0512-a95f-4552-beca-56d487076f43/pages
-GET fetch http://localhost:8081/api/v1/documents/b6ce0512-a95f-4552-beca-56d487076f43/pages
+GET fetch http://localhost:8081/api/v1/documents/766170c5-0390-434f-bb11-d1496edb3f7b/pages
+GET fetch http://localhost:8081/api/v1/documents/766170c5-0390-434f-bb11-d1496edb3f7b/pages

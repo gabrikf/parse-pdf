@@ -4,6 +4,7 @@ import re
 
 from app.documents.domain.job_errors import TransientFailure
 from app.models.chat_model import ChatModel, ChatRequest
+from app.models.guardrail import GuardVerdict
 
 GUARD_MAX_TOKENS = 20
 VERDICT_ATTEMPTS = 3
@@ -33,6 +34,10 @@ class LlamaGuard:
 
     async def is_safe(self, text: str) -> bool:
         """True for ``safe``, or ``unsafe`` naming only allowed categories."""
+        return (await self.check(text)).safe
+
+    async def check(self, text: str) -> GuardVerdict:
+        """The verdict with the categories named, so a rejection can say what was flagged."""
         request = ChatRequest(
             model=self._model_id,
             messages=[{"role": "user", "content": text}],
@@ -44,9 +49,10 @@ class LlamaGuard:
             verdict = lines[0] if lines else ""
 
             if verdict == "safe":
-                return True
+                return GuardVerdict(safe=True)
             if verdict.startswith("unsafe"):
-                return self._only_allowed(_categories(lines))
+                categories = _categories(lines)
+                return GuardVerdict(self._only_allowed(categories), frozenset(categories))
 
         raise TransientFailure("guardrail verdict unreadable")
 

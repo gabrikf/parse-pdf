@@ -251,6 +251,7 @@ The full table, with each decision's rationale and the words that settled it, is
 | AD-027 | Llama Guard reads 20,000-character pieces; an unreadable verdict is transient, never a rejection |
 | AD-028 | A hard 60 s deadline on every OpenRouter attempt; capped output tokens |
 | AD-055 | Parse calls are sized to their deadline: GPT-5 Mini reads 3 pages per call with no reasoning, Gemini 10; a parse call may take 120 s, a summary or guardrail call 60 s |
+| AD-056 | A wrong model answer is sent back with what was wrong before each retry; a failed card says which pages and what went wrong, or which safety category was flagged |
 | AD-029 | One sorted set per feed group per session, moved by the same Lua scripts that change the status |
 | AD-030 | The OpenRouter call limit is configurable; only the e2e stack raises it |
 | AD-031 | `fonttools` added so PyPDF reads CFF fonts |
@@ -268,6 +269,17 @@ The full table, with each decision's rationale and the words that settled it, is
   screen or published demo credentials (AD-010).
 - **SeaweedFS instead of MinIO.** MinIO's community image was archived and removed in 2026 (AD-001).
 - **Locked PDFs are accepted with a password** rather than refused (AD-014).
+
+## Retries and failure messages
+
+Failures are retried in the background; the person sees only the final outcome (AD-056).
+
+| What failed | What the backend does | What the failed card says |
+| --- | --- | --- |
+| A provider error: 429, 5xx, a timeout | Up to 6 attempts per call, backoff from 1 s doubling to 60 s with jitter, `Retry-After` honored; then the job is redelivered, up to 5 deliveries | "Processing stopped after 5 tries. The last error was: ..." |
+| A model's pages for a chunk: not JSON, the wrong shape, or a page missing, repeated or extra | 3 attempts. Each retry repeats the request plus one message telling the model what its last answer got wrong, in the chunk's own page numbers ("page 2 was missing; page 3 appeared more than once") | "The model's answer for pages 4-6 didn't match the PDF after 3 tries: page 5 was missing. Retry, or reparse with another parser." |
+| Llama Guard's verdict is unreadable | Asked 3 times, then treated as a provider error | as for a provider error |
+| Llama Guard flags the text or the summary | Not retried: the same text gets the same verdict | "The safety check flagged the document's text for violent crimes (S1), so no summary was written. ..." |
 
 ## Gaps found in the brief
 

@@ -2,6 +2,7 @@
 
 from app.documents.domain.job_errors import PermanentFailure
 from app.documents.domain.page import Page
+from app.documents.services.guardrail_hint import GuardedText, guardrail_hint
 from app.documents.services.prompt_builder import combine_messages, summary_messages
 from app.documents.services.text_chunker import SUMMARY_PIECE_CHARS, split_text
 from app.models.chat_model import ChatModel, ChatRequest
@@ -42,7 +43,7 @@ class SummaryService:
         pieces = split_text(text, self._piece_chars)
 
         for piece in split_text(text, GUARD_PIECE_CHARS):
-            await self._require_safe(piece)
+            await self._require_safe(piece, GuardedText.DOCUMENT)
 
         if len(pieces) == 1:
             summary = await self._ask(summary_messages(pieces[0]))
@@ -50,7 +51,7 @@ class SummaryService:
             partials = [await self._ask(summary_messages(piece)) for piece in pieces]
             summary = await self._ask(combine_messages(partials))
 
-        await self._require_safe(summary)
+        await self._require_safe(summary, GuardedText.SUMMARY)
         await self._budget.add(1)
         return summary.strip()
 
@@ -60,6 +61,9 @@ class SummaryService:
         )
         return await self._chat.complete(request)
 
-    async def _require_safe(self, text: str) -> None:
-        if not await self._guardrail.is_safe(text):
-            raise PermanentFailure(GUARDRAIL_REJECTED)
+    async def _require_safe(self, text: str, where: GuardedText) -> None:
+        verdict = await self._guardrail.check(text)
+        if not verdict.safe:
+            raise PermanentFailure(
+                GUARDRAIL_REJECTED, hint=guardrail_hint(verdict.categories, where)
+            )

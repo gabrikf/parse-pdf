@@ -98,7 +98,9 @@ class ProcessDocumentUseCase:
             result = await self._run(start.document)
         except PermanentFailure as failure:
             bound.warning("job_failed", error_code=failure.code)
-            result = FinalResult(DocumentStatus.DEAD, pages=[], error_code=failure.code)
+            result = FinalResult(
+                DocumentStatus.DEAD, pages=[], error_code=failure.code, hint=failure.hint
+            )
             await self._dead_letter(start.document, failure.code)
         except TransientFailure as failure:
             bound.warning("job_left_pending", deliveries=start.document.deliveries)

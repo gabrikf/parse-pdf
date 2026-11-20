@@ -105,13 +105,17 @@ async def test_retries_run_out_and_the_entry_stays_pending_for_redelivery(
     assert (record["status"], record["deliveries"]) == ("ready", "2")
 
 
-@pytest.mark.parametrize("verdict", ["unsafe\nS1", "unsafe"])
+@pytest.mark.parametrize(
+    ("verdict", "flagged"),
+    [("unsafe\nS1", "violent crimes (S1)"), ("unsafe", "unsafe content (no category given)")],
+)
 async def test_unsafe_input_ends_dead_guardrail_rejected_without_a_summary_call(
     session_client: httpx.AsyncClient,
     redis: Redis,
     s3: S3Client,
     settings: Settings,
     verdict: str,
+    flagged: str,
 ) -> None:
     document_id = await _upload(session_client)
     chat = FakeChat(guard_verdict=verdict)
@@ -121,3 +125,6 @@ async def test_unsafe_input_ends_dead_guardrail_rejected_without_a_summary_call(
     record = await redis.hgetall(f"doc:{document_id}")
     assert (record["status"], record["error_code"]) == ("dead", "guardrail_rejected")
     assert [call.model for call in chat.calls] == [GUARD_MODEL]
+
+    read = (await session_client.get(f"/api/v1/documents/{document_id}")).json()["data"]
+    assert read["hint"].startswith(f"The safety check flagged the document's text for {flagged}")

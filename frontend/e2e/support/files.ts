@@ -49,3 +49,8 @@ export function failOnceFile(name: string): FilePayload {
   const token = `STUB-FAIL-ONCE-${crypto.randomUUID()}`
   return pdfFile(name, makePdf([`${token} A short page that the stub refuses once.`]))
 }
+
+/** A PDF whose text the stub guardrail answers `unsafe\nS1` for (violent crimes). */
+export function unsafeFile(name: string): FilePayload {
+  return pdfFile(name, makePdf(['STUB-UNSAFE A short page the safety check flags.']))
+}
