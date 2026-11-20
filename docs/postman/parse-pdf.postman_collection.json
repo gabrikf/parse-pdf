@@ -1,0 +1,471 @@
+{
+  "info": {
+    "name": "parse-pdf",
+    "description": "The parse-pdf API (`/api/v1`). Run `docker compose up`, then send **Open a session** first: Postman keeps the `pp_session` cookie for the rest. `baseUrl` defaults to the Compose page origin.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Health",
+      "item": [
+        {
+          "name": "Liveness",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/health/live",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "health",
+                "live"
+              ]
+            },
+            "description": "200 `{data: {status: \"ok\"}}` while the process runs."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('answers the {data, error, meta} envelope', function () {",
+                  "  const body = pm.response.json();",
+                  "  pm.expect(body).to.have.keys('data', 'error', 'meta');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Readiness",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/health/ready",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "health",
+                "ready"
+              ]
+            },
+            "description": "200 when Redis, the bucket and the OpenRouter configuration are reachable; 503 `not_ready` otherwise."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('answers the {data, error, meta} envelope', function () {",
+                  "  const body = pm.response.json();",
+                  "  pm.expect(body).to.have.keys('data', 'error', 'meta');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Session",
+      "item": [
+        {
+          "name": "Open a session",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/sessions",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "sessions"
+              ]
+            },
+            "description": "201 with a new anonymous session (cookie `pp_session`, HttpOnly), 200 when the cookie is still valid. Postman keeps the cookie for the requests below; the token is also saved for Bearer use."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('answers the {data, error, meta} envelope', function () {",
+                  "  const body = pm.response.json();",
+                  "  pm.expect(body).to.have.keys('data', 'error', 'meta');",
+                  "});",
+                  "const data = pm.response.json().data;",
+                  "if (data && data.token) pm.collectionVariables.set('token', data.token);"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Documents",
+      "item": [
+        {
+          "name": "Upload PDFs",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/documents",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "documents"
+              ]
+            },
+            "description": "Multipart: `files` (1-20 PDFs, 50 MB each), `parser` (`pypdf`, `gemini-3.1-flash-lite`, `gpt-5-mini`), optional `password` for a locked PDF. 202 with `documents` (queued, or too_large) and `rejected` (per-file code). Pick a file from `samples/` in the `files` row.",
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "files",
+                  "type": "file",
+                  "src": "samples/w3c-dummy.pdf"
+                },
+                {
+                  "key": "parser",
+                  "value": "pypdf",
+                  "type": "text"
+                },
+                {
+                  "key": "password",
+                  "value": "",
+                  "type": "text",
+                  "disabled": true,
+                  "description": "only for samples/w3c-dummy-locked.pdf (demo password in samples/SOURCES.md)"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('answers the {data, error, meta} envelope', function () {",
+                  "  const body = pm.response.json();",
+                  "  pm.expect(body).to.have.keys('data', 'error', 'meta');",
+                  "});",
+                  "const docs = pm.response.json().data.documents || [];",
+                  "if (docs.length) pm.collectionVariables.set('documentId', docs[0].id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "List documents",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/documents?state=all&limit=20",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "documents"
+              ],
+              "query": [
+                {
+                  "key": "state",
+                  "value": "all"
+                },
+                {
+                  "key": "limit",
+                  "value": "20"
+                }
+              ]
+            },
+            "description": "Newest first. `state`: `parsed` (ready, no_text), `failed` (dead, too_large), `active` (queued, processing) or `all`. `meta.next_cursor` pages on; `meta.counts` holds the chip counts."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('answers the {data, error, meta} envelope', function () {",
+                  "  const body = pm.response.json();",
+                  "  pm.expect(body).to.have.keys('data', 'error', 'meta');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Get a document",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/documents/{{documentId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "documents",
+                "{{documentId}}"
+              ]
+            },
+            "description": "200 with the document; `summary` is set only when `ready`. Another session's id answers 404."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('answers the {data, error, meta} envelope', function () {",
+                  "  const body = pm.response.json();",
+                  "  pm.expect(body).to.have.keys('data', 'error', 'meta');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Read pages",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/documents/{{documentId}}/pages?offset=0&limit=50",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "documents",
+                "{{documentId}}",
+                "pages"
+              ],
+              "query": [
+                {
+                  "key": "offset",
+                  "value": "0"
+                },
+                {
+                  "key": "limit",
+                  "value": "50"
+                }
+              ]
+            },
+            "description": "50 pages at a time (`offset`, `limit` 1-100); `meta.total` is the page count. 409 `not_ready` before `ready`."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('answers the {data, error, meta} envelope', function () {",
+                  "  const body = pm.response.json();",
+                  "  pm.expect(body).to.have.keys('data', 'error', 'meta');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Reparse with another parser",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/documents/{{documentId}}/reparse",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "documents",
+                "{{documentId}}",
+                "reparse"
+              ]
+            },
+            "description": "Clears pages and summary and queues the document again with the parser given. 409 `document_busy` while queued or processing.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\"parser\": \"gemini-3.1-flash-lite\"}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('answers the {data, error, meta} envelope', function () {",
+                  "  const body = pm.response.json();",
+                  "  pm.expect(body).to.have.keys('data', 'error', 'meta');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Retry a dead document",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/documents/{{documentId}}/requeue",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "documents",
+                "{{documentId}}",
+                "requeue"
+              ]
+            },
+            "description": "Queues a `dead` document again with the same parser. 409 `not_dead` otherwise."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('answers the {data, error, meta} envelope', function () {",
+                  "  const body = pm.response.json();",
+                  "  pm.expect(body).to.have.keys('data', 'error', 'meta');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Delete forever",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/documents/{{documentId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "documents",
+                "{{documentId}}"
+              ]
+            },
+            "description": "Removes the PDF, its pages and its summary for good. 409 `document_busy` while processing."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('answers the {data, error, meta} envelope', function () {",
+                  "  const body = pm.response.json();",
+                  "  pm.expect(body).to.have.keys('data', 'error', 'meta');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Budget",
+      "item": [
+        {
+          "name": "Today's model page budget",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/budget",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "budget"
+              ]
+            },
+            "description": "`{used, limit, resets_at}` for the UTC day; model parsers spend pages, every summary spends 1, PyPDF parsing is free."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('answers the {data, error, meta} envelope', function () {",
+                  "  const body = pm.response.json();",
+                  "  pm.expect(body).to.have.keys('data', 'error', 'meta');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:8080"
+    },
+    {
+      "key": "documentId",
+      "value": ""
+    },
+    {
+      "key": "token",
+      "value": ""
+    }
+  ]
+}

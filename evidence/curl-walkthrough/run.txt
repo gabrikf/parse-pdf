@@ -1,0 +1,19 @@
+base: http://localhost:8081/api/v1 (the README's BASE line is replaced by this)
+ok   $ BASE=http://localhost:8080/api/v1
+ok   $ curl -s -c jar -b jar -X POST $BASE/sessions -w '\n%{http_code}\n' -> 201 (README shows 201)
+ok   $ curl -s -b jar -F parser=pypdf -F files=@samples/w3c-dummy.pdf -F files=@samples/constitution-of-the-united-states.pdf $BASE/documents -w '\n%{http_code}\n' -> 202 (README shows 202)
+ok   $ ID=$(curl -s -b jar "$BASE/documents?state=all&limit=1" | jq -r '.data[0].id')
+ok   $ until curl -s -b jar $BASE/documents/$ID | jq -e '.data.status == "ready"' >/dev/null; do sleep 1; done
+ok   $ curl -s -b jar $BASE/documents/$ID -w '\n%{http_code}\n' -> 200 data.status=ready (README shows 200)
+ok   $ curl -s -b jar "$BASE/documents/$ID/pages?offset=0&limit=50" -w '\n%{http_code}\n' -> 200 (README shows 200)
+ok   $ curl -s -b jar "$BASE/documents?state=parsed" -w '\n%{http_code}\n' -> 200 (README shows 200)
+ok   $ curl -s -b jar $BASE/budget -w '\n%{http_code}\n' -> 200 (README shows 200)
+ok   $ curl -s -b jar -F parser=pypdf -F files=@samples/w3c-dummy-locked.pdf $BASE/documents -w '\n%{http_code}\n' -> 422 error.code=all_files_rejected (README shows 422)
+ok   $ curl -s -b jar -F parser=pypdf -F password=parse-pdf-demo -F files=@samples/w3c-dummy-locked.pdf $BASE/documents -w '\n%{http_code}\n' -> 202 (README shows 202)
+ok   $ curl -s -b jar -X POST -H 'Content-Type: application/json' -d '{"parser":"pypdf"}' $BASE/documents/$ID/reparse -w '\n%{http_code}\n' -> 202 data.status=queued (README shows 202)
+ok   $ curl -s -b jar -X POST -H 'Content-Type: application/json' -d '{"parser":"pypdf"}' $BASE/documents/$ID/reparse -w '\n%{http_code}\n' -> 409 error.code=document_busy (README shows 409)
+ok   $ until curl -s -b jar $BASE/documents/$ID | jq -e '.data.status == "ready"' >/dev/null; do sleep 1; done
+ok   $ curl -s -b jar -X DELETE $BASE/documents/$ID -w '\n%{http_code}\n' -> 200 (README shows 200)
+ok   $ curl -s -b jar $BASE/documents/$ID -w '\n%{http_code}\n' -> 404 error.code=document_not_found (README shows 404)
+ok   $ curl -s $BASE/documents -w '\n%{http_code}\n' -> 401 error.code=session_required (README shows 401)
+result: PASSED

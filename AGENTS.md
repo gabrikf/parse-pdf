@@ -3,7 +3,7 @@
 New version of the async PDF processor (`pdf-parser`). The assignment is
 `docs/private/BWAI2.1_test_task.docx` (local only, gitignored; text in `docs/private/test-task.md`). The backend accepts a PDF, stores it, and a
 worker parses it. The upload page has one parser select. Stack: Python FastAPI in `backend/`,
-React + Vite + TypeScript in `frontend/`. No code yet: the work starts with discovery.
+React + Vite + TypeScript in `frontend/`.
 
 The laws below are mandatory. Where each skill came from, and why it was picked over the
 alternatives, is in [`docs/harness.md`](docs/harness.md).
@@ -103,17 +103,20 @@ Review before push (`/review-before-push` runs them in this order):
 
 ## Checks
 
-The commands land with the scaffold. Until then they do not exist; do not report them as passing.
-
-- Backend lint: `ruff check backend && ruff format --check backend && (cd backend && mypy)`
-- Backend coverage: `scripts/coverage-gate.sh`
-- Frontend lint: `npm --prefix frontend run lint` (ESLint with SonarJS)
+- Backend lint: `ruff check backend && ruff format --check backend && (cd backend && mypy && lint-imports)`
+- Backend tests and coverage: `scripts/coverage-gate.sh` (starts `compose.test.yaml` for Redis and
+  SeaweedFS; 85% line and branch)
+- Frontend lint and types: `npm --prefix frontend run lint` (ESLint with SonarJS) and
+  `npm --prefix frontend run typecheck`
+- Frontend unit tests: `npm --prefix frontend run test` (vitest)
+- End-to-end: `npm --prefix frontend run e2e` (Playwright; brings up `compose.yaml` +
+  `compose.e2e.yaml` with the OpenRouter stub on port 8081; report in `evidence/e2e/`)
+- Proof scripts: `scripts/proofs/` (concurrency, Redis restart, curl walkthrough, README, package)
+  and `scripts/compose-check.sh` (clean checkout)
 - Delivery zip: `scripts/package.sh` (committed files only; harness excluded via `.gitattributes`
   `export-ignore`)
 
-When the scaffold adds a root `package.json`, give it
-`"prepare": "git config core.hooksPath .githooks"` so a fresh clone activates the git hooks on
-`npm install`, and update this section with the real commands.
+The root `package.json` runs `git config core.hooksPath .githooks` on `npm install` (`prepare`).
 
 ## Setup
 

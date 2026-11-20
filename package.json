@@ -1,0 +1,12 @@
+{
+  "name": "parse-pdf",
+  "private": true,
+  "description": "Root scripts: activate the git hooks and run the frontend checks from the repository root.",
+  "scripts": {
+    "prepare": "git config core.hooksPath .githooks",
+    "lint": "npm --prefix frontend run lint",
+    "typecheck": "npm --prefix frontend run typecheck",
+    "test": "npm --prefix frontend run test",
+    "e2e": "npm --prefix frontend run e2e"
+  }
+}
