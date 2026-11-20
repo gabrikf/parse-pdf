@@ -1,5 +1,8 @@
 """The child-process sandbox: answers, deadline kill, crash."""
 
+import asyncio
+import contextlib
+import multiprocessing
 import time
 
 import pytest
@@ -34,3 +37,22 @@ async def test_kills_a_child_past_its_deadline() -> None:
 async def test_reports_a_child_that_raises() -> None:
     with pytest.raises(IsolatedCrashError, match="ValueError"):
         await IsolatedRunner(1).run(_explode, (), 10)
+
+
+async def test_a_cancelled_call_kills_its_child_and_frees_the_slot() -> None:
+    runner = IsolatedRunner(1)
+    task = asyncio.create_task(runner.run(_hang, (), 60))
+    await asyncio.sleep(0.5)
+    started = time.monotonic()
+
+    task.cancel()
+    with contextlib.suppress(asyncio.CancelledError):
+        await task
+
+    for _ in range(50):
+        if not multiprocessing.active_children():
+            break
+        await asyncio.sleep(0.1)
+    assert multiprocessing.active_children() == []
+    assert await runner.run(_double, (2,), 10) == 4
+    assert time.monotonic() - started < 10

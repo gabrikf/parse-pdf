@@ -16,7 +16,7 @@ import styles from './ReadyBody.module.css'
 export function ReadyBody({ document, handlers }: { document: DocumentDto; handlers: CardHandlers }) {
   const { copied, copy } = useCopied()
   const firstPage = useQuery({
-    queryKey: queryKeys.firstPage(document.id),
+    queryKey: queryKeys.firstPage(document.id, document.updated_at),
     queryFn: async () => (await getPages(document.id, 0, 1)).data[0] ?? null,
     staleTime: Infinity,
   })

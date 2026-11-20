@@ -7,6 +7,8 @@ from redis.exceptions import ResponseError
 
 from app.queue.job import CONSUMER_GROUP, DEAD_LETTER_KEY, STREAM_KEY, DeadLetter, Job
 
+DEAD_LETTER_MAXLEN = 10_000
+
 
 def _job(entry_id: str, fields: dict[str, str]) -> Job:
     return Job(
@@ -75,7 +77,7 @@ class RedisStreamQueue:
             await pipe.execute()
 
     async def dead_letter(self, letter: DeadLetter) -> None:
-        """Keep a record of a job that gave up."""
+        """Keep a record of a job that gave up (about the last 10,000)."""
         await self._redis.xadd(
             DEAD_LETTER_KEY,
             {
@@ -84,4 +86,7 @@ class RedisStreamQueue:
                 "error_code": letter.error_code,
                 "deliveries": str(letter.deliveries),
             },
+            # Nothing reads this stream and Redis runs with noeviction: keep the latest records.
+            maxlen=DEAD_LETTER_MAXLEN,
+            approximate=True,
         )

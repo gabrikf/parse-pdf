@@ -94,7 +94,14 @@ class UploadDocumentsUseCase:
                 # One millisecond per position keeps the feed order equal to the upload order.
                 return await self._accept(command, file, now + timedelta(milliseconds=index))
 
-        outcomes = await asyncio.gather(*(judge(i, f) for i, f in enumerate(command.files)))
+        # A TaskGroup cancels the other files when one hits a storage or Redis failure, so no
+        # file keeps reading after the controller closes the form; the first error is re-raised.
+        try:
+            async with asyncio.TaskGroup() as group:
+                tasks = [group.create_task(judge(i, f)) for i, f in enumerate(command.files)]
+        except BaseExceptionGroup as failed:
+            raise failed.exceptions[0] from None
+        outcomes = [task.result() for task in tasks]
 
         result = UploadResult()
         for outcome in outcomes:

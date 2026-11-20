@@ -10,6 +10,7 @@ import multiprocessing
 import resource
 from collections.abc import Callable
 from multiprocessing.connection import Connection
+from multiprocessing.process import BaseProcess
 from typing import Any
 
 CHILD_MEMORY_BYTES = 1536 * 1024 * 1024
@@ -45,16 +46,29 @@ class IsolatedRunner:
         self._slots = asyncio.Semaphore(max_concurrency)
 
     async def run(self, fn: Callable[..., Any], args: tuple[Any, ...], timeout_s: float) -> Any:
-        """Call ``fn(*args)`` in a child and return its result."""
-        async with self._slots:
-            return await asyncio.to_thread(self._run_blocking, fn, args, timeout_s)
+        """Call ``fn(*args)`` in a child and return its result.
 
-    def _run_blocking(self, fn: Callable[..., Any], args: tuple[Any, ...], timeout_s: float) -> Any:
+        A cancelled call kills its child at once, so the slot is never freed while the child
+        still holds its memory, and the waiting thread wakes on the closed pipe.
+        """
+        async with self._slots:
+            receiver, child = self._start(fn, args)
+            try:
+                return await asyncio.to_thread(self._wait, receiver, child, timeout_s)
+            except asyncio.CancelledError:
+                child.kill()
+                raise
+
+    def _start(
+        self, fn: Callable[..., Any], args: tuple[Any, ...]
+    ) -> tuple[Connection, BaseProcess]:
         receiver, sender = self._context.Pipe(duplex=False)
         child = self._context.Process(target=_child_main, args=(sender, fn, args), daemon=True)
         child.start()
         sender.close()
+        return receiver, child
 
+    def _wait(self, receiver: Connection, child: BaseProcess, timeout_s: float) -> Any:
         try:
             if not receiver.poll(timeout_s):
                 child.kill()
