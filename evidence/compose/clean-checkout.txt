@@ -1,0 +1,18 @@
+# Criterion 1: clean checkout comes up healthy
+date: 2026-11-20T02:02:16Z
+$ scripts/compose-check.sh
+checkout: git archive a5244c8, .env from .env.example, SESSION_SECRET generated (not printed), WEB_PORT=8082
+api Up 26 seconds (healthy)
+redis Up 32 seconds (healthy)
+storage Up 32 seconds (healthy)
+web Up 20 seconds (healthy)
+worker Up 25 seconds (healthy)
+api depends_on: {'redis': 'service_healthy', 'storage': 'service_healthy'}
+worker depends_on: {'redis': 'service_healthy', 'storage': 'service_healthy'}
+redis: healthy, restarts 0
+storage: healthy, restarts 0
+api: healthy, restarts 0
+worker: healthy, restarts 0
+web: healthy, restarts 0
+result: PASSED
+exit: 0
