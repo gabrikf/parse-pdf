@@ -32,6 +32,10 @@
   font-family: var(--font-read);
 }
 
+.body:focus-visible {
+  outline-offset: -2px;
+}
+
 .page {
   display: flex;
   flex-direction: column;

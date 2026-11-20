@@ -36,7 +36,9 @@ class RetryPolicy:
     def delay(self, attempt: int, retry_after_s: float | None) -> float:
         """Seconds to wait after the 0-based ``attempt`` failed."""
         backoff = self.jitter(0, min(self.cap_s, self.base_s * 2**attempt))
-        return max(backoff, retry_after_s or 0.0)
+        # Retry-After is a floor, but capped like the backoff: one far-off header must not park
+        # a worker (and the claim it keeps refreshing) for an hour.
+        return max(backoff, min(retry_after_s or 0.0, self.cap_s))
 
     async def run[T](self, call: Callable[[], Awaitable[T]]) -> T:
         """Run ``call`` until it succeeds or the attempts run out."""

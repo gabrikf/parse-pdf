@@ -3,7 +3,7 @@ import { useRef, useState } from 'react'
 
 import { deleteDocument, reparseDocument, requeueDocument } from '../../../shared/api/documents'
 import { UnreachableError } from '../../../shared/api/errors'
-import { queryKeys } from '../../../shared/api/queryKeys'
+import { refreshDocuments } from '../../../shared/api/refreshDocuments'
 import { actionError } from '../../../shared/constants/messages'
 import type { ConfirmRequest } from '../components/ConfirmDialog'
 import { ACTION } from '../components/DocumentFeed/types'
@@ -39,10 +39,7 @@ export function useConfirmFlow() {
     setAsking(request)
   }
 
-  const refresh = async () => {
-    await client.invalidateQueries({ queryKey: queryKeys.documents })
-    await client.invalidateQueries({ queryKey: queryKeys.budget })
-  }
+  const refresh = () => refreshDocuments(client)
 
   const confirm = async (request: ConfirmRequest) => {
     const owner = open.current

@@ -2,7 +2,7 @@ import AxeBuilder from '@axe-core/playwright'
 import { expect, test, type Page } from '@playwright/test'
 
 import { card, chip, expectStatus, openApp, openUpload, pickFiles, shot, upload, uploadAndWait } from './support/app'
-import { pdfFile, sample, SAMPLE, tooLargeFile } from './support/files'
+import { pagesFile, pdfFile, sample, SAMPLE, tooLargeFile } from './support/files'
 import { expectFocusRing, expectFocusTrapped, tabTo } from './support/keyboard'
 
 /** Proper nouns and acronyms that keep their capital inside a sentence-case label. */
@@ -63,6 +63,31 @@ test('dialogs close on escape and keep focus inside', async ({ page }, info) => 
   await page.keyboard.press('Escape')
   await expect(confirm).toBeHidden()
   await expect(ready).toBeVisible()
+})
+
+test('the pages sheet scrolls by keyboard and a dialog opened from more actions gives focus back', async ({ page }) => {
+  await openApp(page)
+  const ready = await uploadAndWait(page, pagesFile('thirty-pages.pdf', 30))
+
+  await ready.getByRole('button', { name: 'View all 30 pages' }).click()
+  const sheet = page.getByRole('dialog', { name: 'thirty-pages.pdf' })
+  const body = sheet.getByRole('region', { name: 'thirty-pages.pdf' })
+  const isFocused = () => body.evaluate((element) => element === document.activeElement)
+  for (let press = 0; press < 3 && !(await isFocused()); press += 1) await page.keyboard.press('Tab')
+  await expect(body).toBeFocused()
+  await page.keyboard.press('PageDown')
+  await expect.poll(() => body.evaluate((element) => element.scrollTop)).toBeGreaterThan(0)
+  await page.keyboard.press('Escape')
+  await expect(sheet).toBeHidden()
+
+  const more = ready.getByRole('button', { name: 'More actions for thirty-pages.pdf' })
+  await more.click()
+  await page.getByRole('list', { name: 'Actions for thirty-pages.pdf' }).getByRole('button', { name: 'Reparse' }).click()
+  const confirm = page.getByRole('alertdialog')
+  await expect(confirm).toBeVisible()
+  await page.keyboard.press('Escape')
+  await expect(confirm).toBeHidden()
+  await expect(more).toBeFocused()
 })
 
 test('text and controls keep 4.5 to 1 contrast', async ({ page }, info) => {

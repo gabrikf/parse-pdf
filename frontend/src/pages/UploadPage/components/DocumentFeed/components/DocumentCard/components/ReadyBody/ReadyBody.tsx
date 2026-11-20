@@ -13,10 +13,12 @@ import { plural } from '../../../../../../../../shared/utils/format'
 import { ACTION, type CardHandlers } from '../../../../types'
 import styles from './ReadyBody.module.css'
 
+const COPY_STATUS = { idle: '', copied: 'Copied', failed: "Couldn't copy" } as const
+
 /** A `ready` card: the summary, the actions, and the start of page 1 (criteria 60, 71). Page 1 is
  * fetched only when the card comes near the viewport, not for every card of the feed. */
 export function ReadyBody({ document, handlers }: { document: DocumentDto; handlers: CardHandlers }) {
-  const { copied, copy } = useCopied()
+  const { state: copyState, copy } = useCopied()
   const [previewRef, near] = useNearViewport<HTMLDivElement>()
   const firstPage = useQuery({
     queryKey: queryKeys.firstPage(document.id, document.updated_at),
@@ -43,7 +45,7 @@ export function ReadyBody({ document, handlers }: { document: DocumentDto; handl
           <Copy size={22} strokeWidth={1.75} aria-hidden="true" />
         </Button>
         <span role="status" className={styles.copied}>
-          {copied ? 'Copied' : ''}
+          {COPY_STATUS[copyState]}
         </span>
         <span className={styles.spacer} />
         <Button variant="icon" aria-label={`Delete ${document.filename}`} onClick={() => handlers.onAsk(ACTION.remove, document)}>

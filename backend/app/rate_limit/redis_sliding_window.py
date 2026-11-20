@@ -40,12 +40,12 @@ class RedisInFlightCounter:
     def __init__(self, redis: Redis) -> None:
         self._redis = redis
         self._script = redis.register_script(_script("in_flight"))
+        self._release = redis.register_script(_script("in_flight_release"))
 
     async def acquire(self, key: str, maximum: int) -> bool:
         """Take a slot when fewer than ``maximum`` are taken."""
         return int(await self._script(keys=[key], args=[maximum, IN_FLIGHT_TTL_S])) == 1
 
     async def release(self, key: str) -> None:
-        """Give the slot back; the counter never goes below zero."""
-        if int(await self._redis.decr(key)) <= 0:
-            await self._redis.delete(key)
+        """Give the slot back; the counter never goes below zero (one atomic script)."""
+        await self._release(keys=[key])

@@ -5,6 +5,8 @@ import { defineConfig, devices } from '@playwright/test'
 // `captures/<Frame>.running.png`. Run: npx playwright test -c playwright.captures.config.ts
 export default defineConfig({
   testDir: './captures',
+  // The same stack as the e2e run: the 1.5 s stub delay and an unused model budget.
+  globalSetup: './e2e/global-setup.ts',
   testMatch: '*.capture.ts',
   retries: 0,
   workers: 3,

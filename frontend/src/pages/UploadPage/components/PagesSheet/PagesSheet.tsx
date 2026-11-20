@@ -19,7 +19,7 @@ function PageBody({ page }: { page: PageDto }) {
 /** A ready document's pages, 50 at a time, with a control for the next 50 (criterion 60). */
 export function PagesSheet({ document, onClose }: { document: DocumentDto | null; onClose: () => void }) {
   const pages = useInfiniteQuery({
-    queryKey: queryKeys.pages(document?.id ?? ''),
+    queryKey: queryKeys.pages(document?.id ?? '', document?.updated_at ?? ''),
     queryFn: ({ pageParam }) => getPages(document?.id ?? '', pageParam),
     initialPageParam: 0,
     getNextPageParam: (last, all) => {
@@ -47,7 +47,8 @@ export function PagesSheet({ document, onClose }: { document: DocumentDto | null
           <X size={22} aria-hidden="true" />
         </Button>
       </header>
-      <div className={styles.body}>
+      {/* Focusable, so the keyboard can scroll it even when Close is its only control. */}
+      <div className={styles.body} tabIndex={0} role="region" aria-labelledby="pages-title">
         {list.map((page) => (
           <article key={page.number} aria-label={`Page ${page.number}`} className={styles.page}>
             <div className={styles.number}>Page {page.number}</div>

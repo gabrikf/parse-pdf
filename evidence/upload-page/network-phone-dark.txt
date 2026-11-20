@@ -1,6 +1,6 @@
 GET document http://localhost:8081/
-GET script http://localhost:8081/assets/index-Ct8--x0g.js
-GET stylesheet http://localhost:8081/assets/index-wNWdOUX4.css
+GET script http://localhost:8081/assets/index-C2xBiNuI.js
+GET stylesheet http://localhost:8081/assets/index-Ck1Q70K9.css
 POST fetch http://localhost:8081/api/v1/sessions
 GET font http://localhost:8081/assets/newsreader-latin-wght-italic-Bxi8ein9.woff2
 GET font http://localhost:8081/assets/schibsted-grotesk-latin-wght-normal-Bb8VGrTG.woff2
@@ -16,8 +16,10 @@ GET fetch http://localhost:8081/api/v1/documents
 GET fetch http://localhost:8081/api/v1/documents
 GET fetch http://localhost:8081/api/v1/documents
 GET fetch http://localhost:8081/api/v1/documents
+GET fetch http://localhost:8081/api/v1/budget
+GET fetch http://localhost:8081/api/v1/documents
 GET fetch http://localhost:8081/api/v1/documents
 GET fetch http://localhost:8081/api/v1/documents
 GET fetch http://localhost:8081/api/v1/budget
-GET fetch http://localhost:8081/api/v1/documents/ef24cfaa-c43d-4979-acaf-990ee54f73bb/pages
-GET fetch http://localhost:8081/api/v1/documents/ef24cfaa-c43d-4979-acaf-990ee54f73bb/pages
+GET fetch http://localhost:8081/api/v1/documents/de602b6e-7a31-46ba-b613-9f6a77d346d6/pages
+GET fetch http://localhost:8081/api/v1/documents/de602b6e-7a31-46ba-b613-9f6a77d346d6/pages

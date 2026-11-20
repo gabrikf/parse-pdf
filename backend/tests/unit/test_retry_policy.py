@@ -38,6 +38,12 @@ async def test_retry_after_is_a_floor() -> None:
     assert policy.delay(0, 7.0) == 7.0
 
 
+async def test_retry_after_is_capped_like_the_backoff() -> None:
+    policy = RetryPolicy(jitter=lambda low, high: 0.0)
+
+    assert policy.delay(0, 3600.0) == 60.0
+
+
 async def test_success_after_two_failures_makes_three_calls() -> None:
     sleeps: list[float] = []
     calls = 0

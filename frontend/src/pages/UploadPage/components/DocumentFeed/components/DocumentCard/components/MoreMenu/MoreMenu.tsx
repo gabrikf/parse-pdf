@@ -37,6 +37,9 @@ export function MoreMenu({ document, handlers }: { document: DocumentDto; handle
   }, [open])
 
   const pick = (item: MenuItem) => {
+    // The picked button unmounts with the list: move focus to "..." first, so the dialog it opens
+    // gives focus back there when it closes.
+    wrap.current?.querySelector('button')?.focus()
     setOpen(false)
     if (item.action === 'pages') handlers.onOpenPages(document)
     else handlers.onAsk(item.action, document)

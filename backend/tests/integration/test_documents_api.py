@@ -49,7 +49,7 @@ async def test_feed_default_limit_is_20(session_client: httpx.AsyncClient, redis
     assert body["meta"]["limit"] == 20
 
 
-@pytest.mark.parametrize("limit", ["0", "51", "abc", "", "-1"])
+@pytest.mark.parametrize("limit", ["0", "51", "abc", "", "-1", "²", "9" * 5000])
 async def test_bad_limit_is_422(session_client: httpx.AsyncClient, limit: str) -> None:
     response = await session_client.get("/api/v1/documents", params={"limit": limit})
 
@@ -217,7 +217,7 @@ async def test_ready_document_shows_summary_and_pages_in_order(
     assert [p["number"] for p in rest["data"]] == list(range(101, 121))
 
 
-@pytest.mark.parametrize("limit", ["0", "101", "x"])
+@pytest.mark.parametrize("limit", ["0", "101", "x", "²", "9" * 5000])
 async def test_bad_pages_limit_is_422(
     session_client: httpx.AsyncClient, redis: Redis, limit: str
 ) -> None:

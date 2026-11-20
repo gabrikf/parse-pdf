@@ -32,9 +32,16 @@ class BudgetedRestart:
         if reserved and not await self._budget.reserve(document.page_count):
             raise ModelBudgetExhaustedError
 
-        queued = await self._repository.restart_run(
-            document, allowed, parser, new_id(), self._clock.now()
-        )
+        try:
+            queued = await self._repository.restart_run(
+                document, allowed, parser, new_id(), self._clock.now()
+            )
+        except BaseException:
+            # The run was not queued (Redis failed or the request was cancelled): the pages
+            # it reserved go back, as upload does.
+            if reserved:
+                await self._budget.release(document.page_count)
+            raise
         if queued is None:
             if reserved:
                 await self._budget.release(document.page_count)

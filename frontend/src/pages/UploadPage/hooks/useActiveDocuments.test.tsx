@@ -96,4 +96,27 @@ describe('useActiveDocuments', () => {
     await advance(50)
     expect(feedCalls()).toBe(2)
   })
+
+  it('refetches the feed when an active document moves from queued to processing', async () => {
+    let round = 0
+    const { calls } = mockFetch((url) => {
+      if (!url.includes('state=active')) return envelope([], { counts: { parsed: 0, failed: 0, active: 1, all: 1 } })
+      round += 1
+      return envelope([makeDocument({ id: 'a', status: round === 1 ? 'queued' : 'processing' })])
+    })
+    renderHook(
+      () => {
+        useActiveDocuments(true)
+        useFeed('all', true)
+      },
+      { wrapper },
+    )
+    const feedCalls = () => calls.filter((url) => url.includes('state=all')).length
+
+    await advance(0)
+    expect(feedCalls()).toBe(1)
+    await advance(2000)
+    await advance(50)
+    expect(feedCalls()).toBe(2)
+  })
 })
