@@ -1,0 +1,14 @@
+# Criterion 24 Redis restart proof
+date: 2026-11-20T01:55:13Z
+commit: 945baf5
+command: .venv/bin/python scripts/load/redis_restart.py --base http://localhost:8081 --project parse-pdf-e2e
+
+$ docker compose -p parse-pdf-e2e stop worker
+uploaded: 202, statuses ['queued', 'queued', 'queued', 'queued', 'queued']
+$ docker compose -p parse-pdf-e2e restart redis
+$ docker compose -p parse-pdf-e2e up -d --wait redis
+first request after Redis is back: 200
+statuses after restart: ['queued', 'queued', 'queued', 'queued', 'queued']
+$ docker compose -p parse-pdf-e2e start worker
+final statuses: ['ready', 'ready', 'ready', 'ready', 'ready']
+result: PASSED

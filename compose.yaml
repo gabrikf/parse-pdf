@@ -1,0 +1,118 @@
+# parse-pdf: one `docker compose up` runs the whole stack. Only `web` is published to the host.
+name: parse-pdf
+
+x-backend-env: &backend-env
+  SESSION_SECRET: ${SESSION_SECRET:?set SESSION_SECRET in .env (at least 32 bytes)}
+  OPENROUTER_API_KEY: ${OPENROUTER_API_KEY:-}
+  OPENROUTER_BASE_URL: ${OPENROUTER_BASE_URL:-https://openrouter.ai/api/v1}
+  SUMMARY_MODEL_ID: ${SUMMARY_MODEL_ID:-google/gemini-3.1-flash-lite}
+  MODEL_PAGE_BUDGET_PER_DAY: ${MODEL_PAGE_BUDGET_PER_DAY:-3000}
+  OPENROUTER_CALLS_PER_MINUTE: ${OPENROUTER_CALLS_PER_MINUTE:-30}
+  PAGE_ORIGIN: ${PAGE_ORIGIN:-http://localhost:8080}
+  COOKIE_SECURE: ${COOKIE_SECURE:-false}
+  REDIS_URL: redis://redis:6379/0
+  S3_ENDPOINT_URL: http://storage:8333
+  S3_ACCESS_KEY: ${S3_ACCESS_KEY:-parse-pdf}
+  S3_SECRET_KEY: ${S3_SECRET_KEY:-parse-pdf-local-only}
+  S3_BUCKET: ${S3_BUCKET:-documents}
+  JOB_CLAIM_IDLE_MS: ${JOB_CLAIM_IDLE_MS:-60000}
+  LOG_LEVEL: ${LOG_LEVEL:-INFO}
+
+services:
+  redis:
+    image: redis:7.4-alpine
+    command:
+      - redis-server
+      - --appendonly
+      - "yes"
+      - --appendfsync
+      - everysec
+      - --maxmemory-policy
+      - noeviction
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    restart: unless-stopped
+
+  storage:
+    image: chrislusf/seaweedfs:4.54
+    entrypoint: ["/bin/sh", "/opt/storage/entrypoint.sh"]
+    environment:
+      S3_ACCESS_KEY: ${S3_ACCESS_KEY:-parse-pdf}
+      S3_SECRET_KEY: ${S3_SECRET_KEY:-parse-pdf-local-only}
+    volumes:
+      - storage-data:/data
+      - ./deploy/storage/entrypoint.sh:/opt/storage/entrypoint.sh:ro
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1:8333/healthz"]
+      interval: 5s
+      timeout: 3s
+      retries: 30
+      start_period: 10s
+    restart: unless-stopped
+
+  api:
+    build:
+      context: ./backend
+      target: runtime
+    image: parse-pdf-backend:local
+    environment: *backend-env
+    depends_on:
+      redis:
+        condition: service_healthy
+      storage:
+        condition: service_healthy
+    healthcheck:
+      test:
+        - CMD
+        - python
+        - -c
+        - "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/api/v1/health/live', timeout=3)"
+      interval: 5s
+      timeout: 4s
+      retries: 20
+      start_period: 5s
+    restart: unless-stopped
+
+  worker:
+    image: parse-pdf-backend:local
+    command: ["python", "-m", "app.worker.main"]
+    environment: *backend-env
+    depends_on:
+      redis:
+        condition: service_healthy
+      storage:
+        condition: service_healthy
+      api:
+        condition: service_started
+    stop_grace_period: 35s
+    healthcheck:
+      test: ["CMD", "python", "-m", "app.worker.heartbeat"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    restart: unless-stopped
+
+  web:
+    build:
+      context: ./frontend
+    depends_on:
+      api:
+        condition: service_healthy
+    ports:
+      - "${WEB_PORT:-8080}:8080"
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1:8080/healthz"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    restart: unless-stopped
+
+volumes:
+  redis-data:
+  storage-data:

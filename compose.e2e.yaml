@@ -1,0 +1,42 @@
+# e2e override (AD-024): every model call goes to a local OpenRouter stub, never the real key.
+#   docker compose -p parse-pdf-e2e -f compose.yaml -f compose.e2e.yaml up -d --build --wait
+services:
+  openrouter-stub:
+    build:
+      context: ./backend
+      target: openrouter-stub
+    environment:
+      STUB_DELAY_S: ${STUB_DELAY_S:-0.3}
+    healthcheck:
+      test:
+        - CMD
+        - python
+        - -c
+        - "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8090/health', timeout=3)"
+      interval: 3s
+      retries: 20
+
+  api:
+    environment:
+      OPENROUTER_API_KEY: stub-key-not-a-secret
+      OPENROUTER_BASE_URL: http://openrouter-stub:8090/api/v1
+      PAGE_ORIGIN: http://localhost:${WEB_PORT:-8081}
+      # Every e2e test and the load proof's 50 sessions come from one IP (AD-032).
+      SESSIONS_PER_MINUTE_PER_IP: "1000"
+    depends_on:
+      openrouter-stub:
+        condition: service_healthy
+
+  worker:
+    environment:
+      OPENROUTER_API_KEY: stub-key-not-a-secret
+      OPENROUTER_BASE_URL: http://openrouter-stub:8090/api/v1
+      OPENROUTER_CALLS_PER_MINUTE: "600"
+      PAGE_ORIGIN: http://localhost:${WEB_PORT:-8081}
+    depends_on:
+      openrouter-stub:
+        condition: service_healthy
+
+  web:
+    ports: !override
+      - "${WEB_PORT:-8081}:8080"

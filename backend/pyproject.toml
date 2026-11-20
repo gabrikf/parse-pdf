@@ -1,0 +1,141 @@
+[project]
+name = "parse-pdf-backend"
+version = "1.0.0"
+description = "Async PDF processor: FastAPI API and Redis Streams workers"
+requires-python = ">=3.13"
+dependencies = [
+  "fastapi>=0.115",
+  "uvicorn[standard]>=0.32",
+  "redis>=5.2",
+  "pydantic-settings>=2.6",
+  "pypdf[crypto]>=5.1",
+  "fonttools>=4.55",
+  "aiobotocore>=2.15",
+  "httpx>=0.28",
+  "PyJWT>=2.10",
+  "secure>=1.0",
+  "structlog>=24.4",
+  "python-multipart>=0.0.18",
+]
+
+[project.optional-dependencies]
+dev = [
+  "pytest>=8.3",
+  "pytest-asyncio>=0.24",
+  "pytest-cov>=6.0",
+  "respx>=0.21",
+  "asgi-lifespan>=2.1",
+  "import-linter>=2.1",
+  "ruff>=0.8",
+  "mypy>=1.13",
+  "types-aiobotocore[s3]>=2.15",
+]
+
+[build-system]
+requires = ["setuptools>=75"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+include = ["app*"]
+
+[tool.setuptools.package-data]
+"app.repositories" = ["lua/*.lua"]
+"app.rate_limit" = ["lua/*.lua"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py313"
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "B", "UP", "S", "ASYNC", "SIM", "RUF", "PL", "D1", "N", "C4", "PT", "RET", "TRY", "BLE", "T20"]
+ignore = ["D105", "D107", "PLR0913", "TRY003", "PLR2004"]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**" = ["D1", "PLR0917", "S101", "S105", "S106", "S107", "PLR2004", "S311", "PLC0415"]
+"stubs/**" = ["D1"]
+
+[tool.mypy]
+strict = true
+python_version = "3.13"
+files = ["app", "tests", "stubs"]
+plugins = ["pydantic.mypy"]
+
+[[tool.mypy.overrides]]
+module = ["secure.*"]
+ignore_missing_imports = true
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "session"
+asyncio_default_test_loop_scope = "session"
+testpaths = ["tests"]
+addopts = "-p no:cacheprovider"
+
+[tool.coverage.run]
+source = ["app"]
+branch = true
+omit = ["app/worker/main.py"]
+
+[tool.coverage.report]
+show_missing = true
+skip_covered = true
+
+[tool.importlinter]
+root_package = "app"
+include_external_packages = true
+
+[[tool.importlinter.contracts]]
+name = "The domain depends on no other app package"
+type = "forbidden"
+source_modules = ["app.documents.domain"]
+forbidden_modules = [
+  "app.core",
+  "app.security",
+  "app.rate_limit",
+  "app.documents.use_cases",
+  "app.documents.services",
+  "app.documents.controllers",
+  "app.parsers",
+  "app.models",
+  "app.repositories",
+  "app.queue",
+  "app.storage",
+  "app.worker",
+  "app.container",
+  "app.main",
+]
+
+[[tool.importlinter.contracts]]
+name = "Use cases and services depend on interfaces, never on adapters"
+type = "forbidden"
+source_modules = ["app.documents.use_cases", "app.documents.services"]
+forbidden_modules = [
+  "app.repositories.redis_document_repository",
+  "app.queue.redis_stream_queue",
+  "app.storage.s3_object_storage",
+  "app.models.openrouter_chat_model",
+  "app.models.llama_guard",
+  "app.parsers.pypdf_page_parser",
+  "app.parsers.model_page_parser",
+  "app.rate_limit.redis_sliding_window",
+  "app.rate_limit.redis_model_budget",
+  "app.documents.controllers",
+  "app.container",
+  "redis",
+  "aiobotocore",
+  "httpx",
+  "fastapi",
+]
+
+[[tool.importlinter.contracts]]
+name = "Controllers call use cases, never adapters"
+type = "forbidden"
+source_modules = ["app.documents.controllers"]
+forbidden_modules = [
+  "app.repositories.redis_document_repository",
+  "app.queue.redis_stream_queue",
+  "app.storage.s3_object_storage",
+  "app.models.openrouter_chat_model",
+  "redis",
+  "aiobotocore",
+]

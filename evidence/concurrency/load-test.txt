@@ -1,0 +1,26 @@
+# Criterion 22 load proof
+date: 2026-11-20T01:48:42Z
+commit base: 945baf5 + working tree
+stack: docker compose -p parse-pdf-e2e -f compose.yaml -f compose.e2e.yaml up -d --build --wait --scale worker=3
+command: .venv/bin/python scripts/load/load_test.py --base http://localhost:8081 --project parse-pdf-e2e
+services:
+parse-pdf-e2e-api-1 Up About a minute (healthy)
+parse-pdf-e2e-openrouter-stub-1 Up About a minute (healthy)
+parse-pdf-e2e-redis-1 Up About a minute (healthy)
+parse-pdf-e2e-storage-1 Up About a minute (healthy)
+parse-pdf-e2e-web-1 Up About a minute (healthy)
+parse-pdf-e2e-worker-1 Up About a minute (healthy)
+parse-pdf-e2e-worker-2 Up About a minute (healthy)
+parse-pdf-e2e-worker-3 Up About a minute (healthy)
+
+phase 1: 5000 GET /api/v1/documents at concurrency 200
+  statuses: {200: 5000}
+  elapsed: 8.18 s, 611 requests/s
+  latency ms: p50 218, p95 966, p99 1584, max 3218
+phase 2: 50 sessions upload one PDF each at the same moment
+  upload statuses: {202: 50}
+  final statuses: {'ready': 50}
+  deliveries per document: {'1': 50}
+  all ready after 32.31 s
+result: PASSED
+exit: 0

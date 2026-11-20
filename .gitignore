@@ -27,3 +27,10 @@ dist/
 
 # Delivery zip
 parse-pdf.zip
+*.egg-info/
+build/
+*.tsbuildinfo
+
+# Playwright scratch (the kept report goes to evidence/e2e/)
+frontend/test-results/
+frontend/playwright-report/

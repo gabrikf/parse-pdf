@@ -42,7 +42,7 @@ and, in integration tests, a real Redis and SeaweedFS in Compose with OpenRouter
    `PAGE_ORIGIN`, session JWT check (door 4), upload rate limits (door 8)
 3. `DocumentsController` (door 6) - parses multipart, calls `UploadDocumentsUseCase`, wraps the
    result in the response envelope (door 3)
-4. `UploadDocumentsUseCase` (door 6) - per file: `PdfInspector` (new, process pool, 10 s timeout)
+4. `UploadDocumentsUseCase` (door 6) - per file: `PdfInspector` (new, one-shot child process killed at 10 s, AD-026)
    checks magic bytes, size, encryption/password, page count; `ModelBudget` (door 8) reserves
    pages for model parsers; accepted bytes go to `ObjectStorage` -> SeaweedFS
    `documents/{id}.pdf` (door 5)
@@ -98,31 +98,43 @@ keep `use_cases`/`services` off concrete adapters:
 ```
 backend/app/
   main.py                    FastAPI app factory (lifespan opens Redis, S3, HTTP pools)
-  container.py               composition root: builds every adapter, injects it into use cases
-  core/                      settings.py, envelope.py, errors.py, logging.py, clock.py, ids.py
-  security/                  session_token.py, session_middleware.py, headers.py, cors.py,
-                             body_limit.py, request_id.py
-  rate_limit/                rate_limiter.py (interface), redis_sliding_window.py,
-                             in_flight_counter.py, model_budget.py
+  serve.py                   API entry point: validates settings, names a bad variable, runs uvicorn
+  container.py               composition root of the API: builds every adapter, injects it
+  worker_container.py        composition root of a worker
+  infrastructure.py          opens the Redis, S3 and HTTP clients
+  core/                      settings.py, envelope.py, errors.py, logging.py, clock.py, ids.py,
+                             request_context.py, health.py, isolated.py (one-shot child, AD-026)
+  security/                  session_token.py, session_guard.py, headers.py, cors.py,
+                             body_limit.py, request_id.py, error_boundary.py, asgi_types.py
+  rate_limit/                rate_limiter.py (interface), redis_sliding_window.py (window +
+                             in-flight counter), model_budget.py (interface),
+                             redis_model_budget.py, lua/
   documents/
     domain/                  document.py, document_status.py, parser_kind.py, page.py,
-                             rejection.py, errors.py, transitions.py
-    use_cases/               upload_documents.py, list_documents.py, get_document.py,
-                             get_pages.py, reparse_document.py, requeue_document.py,
-                             delete_document.py, process_document.py
-    services/                pdf_inspector.py, pdf_validation.py, parser_selector.py,
-                             summary_service.py, text_chunker.py, prompt_builder.py
-    controllers/             documents_controller.py, sessions_controller.py,
-                             health_controller.py, schemas/ (request/response DTOs)
+                             rejection.py, errors.py, job_errors.py, transitions.py
+    use_cases/               upload_documents.py, read_documents.py (list, get, pages, budget),
+                             rerun_documents.py (reparse, requeue), delete_document.py,
+                             ownership.py, process_document.py
+    services/                pdf_inspector.py, pdf_validation.py, filename.py,
+                             parser_selector.py, summary_service.py, text_chunker.py,
+                             prompt_builder.py
+    controllers/             documents_controller.py, upload_controller.py,
+                             sessions_controller.py, budget_controller.py,
+                             health_controller.py, error_handlers.py, api_services.py,
+                             session_dependency.py, responses.py, schemas/ (DTOs, query params)
   parsers/                   page_parser.py (interface), pypdf_page_parser.py,
-                             model_page_parser.py, pdf_splitter.py, page_schema.py
+                             model_page_parser.py, pdf_tools.py (inspect, extract, split),
+                             page_schema.py
   models/                    chat_model.py (interface), openrouter_chat_model.py,
-                             retry_policy.py, guardrail.py (interface), llama_guard.py
+                             retry_policy.py, call_gate.py, guardrail.py (interface),
+                             llama_guard.py
   repositories/              document_repository.py (interface), redis_document_repository.py,
-                             lua/ (create.lua, transition.lua, finalize.lua)
+                             redis_feed_reader.py, feed_cursor.py, document_codec.py,
+                             redis_keys.py, lua_scripts.py, lua/ (create, begin_run,
+                             save_chunk, finalize, restart_run, delete)
   queue/                     job_queue.py (interface), redis_stream_queue.py, job.py
   storage/                   object_storage.py (interface), s3_object_storage.py
-  worker/                    main.py, consumer_loop.py, reclaimer.py, claim_keeper.py,
+  worker/                    main.py, consumer_loop.py (read + reclaim sweep), claim_keeper.py,
                              heartbeat.py, shutdown.py
 ```
 
@@ -175,7 +187,7 @@ erDiagram
 
 New: every entity above - `SESSION` (JWT only, not stored), `DOCUMENT`, `PAGE`, `PARSE_CHUNK`,
 `STORED_PDF`, `JOB`, `DEAD_LETTER`, `DAILY_BUDGET`. One-way constraints: one unacknowledged `JOB`
-per `DOCUMENT`, enforced by the `run_id` compare-and-set in `transition.lua` (door 1, AD-005);
+per `DOCUMENT`, enforced by the `run_id` compare-and-set in `begin_run.lua` and `restart_run.lua` (door 1, AD-005);
 every `DOCUMENT` key and `STORED_PDF` expires after 604,800 s (AD-012).
 
 ```mermaid
@@ -235,6 +247,9 @@ so ids do not leak.
 | 9. Security headers | `secure` 2.x `SecureASGIMiddleware` with `Preset.BASIC`; CORS allow-list = `PAGE_ORIGIN` only, `allow_credentials=true` | hand-written headers: drift and gaps; `*` origin: forbidden by AD-006 and incompatible with credentials |
 | 10. Frontend stack and pattern | React 19 + Vite + TypeScript strict, `@tanstack/react-query`, `react-hook-form`, `react-markdown` without `rehype-raw`; folders `pages/<Page>/components/<Component>/components/...` + `shared/`; `as const` objects instead of TS `enum` | Next.js: SSR adds a server the brief does not need for one page; a flat `components/` folder: the user asked for owned, nested children |
 | 11. New dependencies | backend: `fastapi`, `uvicorn[standard]`, `redis>=5` (asyncio), `pydantic-settings`, `pypdf[crypto]`, `aiobotocore` + `types-aiobotocore[s3]`, `httpx`, `PyJWT`, `secure`, `structlog`, `python-multipart`; dev: `pytest`, `pytest-asyncio`, `pytest-cov`, `respx`, `asgi-lifespan`, `import-linter`, `ruff`, `mypy`; images `python:3.13-slim`, `redis:7.4-alpine`, `chrislusf/seaweedfs`, `nginx:alpine`, `node:22-alpine` (build) | `celery`/`arq`/`taskiq`: they would replace the Redis Streams consumer the brief asks to see |
+
+| 12. Feed group index (door 1 additive, AD-029) | per session, besides `session:{sid}:docs`, one zset per feed group: `session:{sid}:docs:parsed`, `:failed`, `:active`, scored by `created_at` ms, `EXPIRE 604800`; moved only by the scripts that change the status; status changes go through `lua/create.lua`, `begin_run.lua`, `save_chunk.lua`, `finalize.lua`, `restart_run.lua`, `delete.lua` | filter by status on read: every 2 s poll would load every document of the session |
+| 13. `fonttools` (door 11 additive, AD-031) | backend dependency `fonttools>=4.55` | none: pypdf needs it to read CFF font encodings |
 
 - Nothing else in this change is hard to reverse
 
