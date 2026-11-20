@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
-# Build the zip to send: committed files only, minus everything marked export-ignore in .gitattributes.
-# No .venv, node_modules, .env or agent tooling ends up in it.
+# Build the zip to send: committed files only, the agent harness included.
+# No .venv, node_modules, .env or private brief ends up in it: none of them is committed.
 set -euo pipefail
 
 root="$(git rev-parse --show-toplevel)"

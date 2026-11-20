@@ -113,8 +113,8 @@ Review before push (`/review-before-push` runs them in this order):
   `compose.e2e.yaml` with the OpenRouter stub on port 8081; report in `evidence/e2e/`)
 - Proof scripts: `scripts/proofs/` (concurrency, Redis restart, curl walkthrough, README, package)
   and `scripts/compose-check.sh` (clean checkout)
-- Delivery zip: `scripts/package.sh` (committed files only; harness excluded via `.gitattributes`
-  `export-ignore`)
+- Delivery zip: `scripts/package.sh` (committed files only, harness included; `.env`, `.venv`,
+  `node_modules` and `docs/private/` are never committed)
 
 The root `package.json` runs `git config core.hooksPath .githooks` on `npm install` (`prepare`).
 

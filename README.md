@@ -5,6 +5,11 @@ API stores the PDF and queues it on Redis Streams; workers parse it with PyPDF, 
 Lite or GPT-5 Mini, then write one summary per file with Gemini 3.1 Flash Lite. A React page
 shows the feed on a phone, a tablet or a laptop.
 
+<p align="center">
+  <img src="docs/media/demo.gif" width="300" alt="On a phone: two PDFs are uploaded with Gemini, their circles in the stories row go from queued to processing, the scanned constitution arrives with its summary, its pages open as markdown, and the page switches to dark mode.">
+</p>
+<p align="center"><sub>Recorded from the running app on a phone-sized screen, with real Gemini 3.1 Flash Lite calls.</sub></p>
+
 ## Quick start
 
 You need Docker with Compose v2. Nothing else runs on the host.
@@ -217,7 +222,7 @@ created_at, updated_at, summary}`. Parsers: `pypdf` (plain text), `gemini-3.1-fl
 ## Decisions
 
 The full table, with each decision's rationale and the words that settled it, is in
-`.specs/STATE.md` in the repository (left out of the zip with the rest of the agent tooling).
+[`.specs/STATE.md`](.specs/STATE.md).
 
 | ID | Decision |
 | --- | --- |
@@ -334,6 +339,18 @@ counts 1. PyPDF parsing never counts and is never refused.
 7. **`/review-before-push`.** The full diff went through the review lanes (React, Python, security,
    accessibility, clean code, performance) and a judge that keeps only verified findings.
 
+Everything behind this is in the zip, so the process can be read, not only the result:
+
+| Where | What it holds |
+| --- | --- |
+| [`AGENTS.md`](AGENTS.md), [`CLAUDE.md`](CLAUDE.md) | The laws every agent follows: coverage, proof, lint, no fake passes, secrets |
+| [`docs/harness.md`](docs/harness.md), [`skills-lock.json`](skills-lock.json) | Why each skill was picked, and their pinned versions |
+| [`.claude/`](.claude/), [`.cursor/`](.cursor/) | The edit hook wiring and the vendored skills, for Claude Code and Cursor |
+| [`scripts/hooks/`](scripts/hooks/), [`.githooks/`](.githooks/), [`scripts/phase.sh`](scripts/phase.sh) | The lint-on-edit hook, the commit and push gates, the phase switch |
+| [`.specs/features/document-processing/`](.specs/features/document-processing/) | The request word for word, the approved plan with its 81 criteria, the design captures and the review records |
+| [`.specs/STATE.md`](.specs/STATE.md) | Every decision (AD-001 to AD-056) with its rationale and the words that settled it |
+| [`evidence/`](evidence/) | The proof for each requirement: gate output, load runs, screenshots, the e2e report |
+
 ## Testing and evidence
 
 | What | Command |
@@ -352,7 +369,7 @@ The backend tests run against a real Redis and a real SeaweedFS (`compose.test.y
 calls go to fakes, respx or a local OpenRouter stub, never the real key. The e2e suite drives
 Chromium at 375, 768 and 1280 px in light and dark with no retries. The records of each proof
 (command output, screenshots, the e2e report, the network log of the page, one live smoke test
-whose outcome only is written down) are kept in `evidence/` in the repository.
+whose outcome only is written down) are kept in [`evidence/`](evidence/).
 
 ## What I would do next
 
