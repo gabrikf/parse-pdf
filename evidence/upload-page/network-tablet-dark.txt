@@ -1,5 +1,5 @@
 GET document http://localhost:8081/
-GET script http://localhost:8081/assets/index-C2xBiNuI.js
+GET script http://localhost:8081/assets/index-DfykD4IQ.js
 GET stylesheet http://localhost:8081/assets/index-Ck1Q70K9.css
 POST fetch http://localhost:8081/api/v1/sessions
 GET font http://localhost:8081/assets/schibsted-grotesk-latin-wght-normal-Bb8VGrTG.woff2
@@ -14,11 +14,11 @@ GET fetch http://localhost:8081/api/v1/budget
 GET fetch http://localhost:8081/api/v1/documents
 GET fetch http://localhost:8081/api/v1/documents
 GET fetch http://localhost:8081/api/v1/documents
-GET fetch http://localhost:8081/api/v1/budget
-GET fetch http://localhost:8081/api/v1/documents
-GET fetch http://localhost:8081/api/v1/documents
-GET fetch http://localhost:8081/api/v1/documents
 GET fetch http://localhost:8081/api/v1/documents
 GET fetch http://localhost:8081/api/v1/budget
-GET fetch http://localhost:8081/api/v1/documents/78fd8669-3377-49c7-9802-3b1a808dc895/pages
-GET fetch http://localhost:8081/api/v1/documents/78fd8669-3377-49c7-9802-3b1a808dc895/pages
+GET fetch http://localhost:8081/api/v1/documents
+GET fetch http://localhost:8081/api/v1/documents
+GET fetch http://localhost:8081/api/v1/documents
+GET fetch http://localhost:8081/api/v1/budget
+GET fetch http://localhost:8081/api/v1/documents/9ea120b7-db52-43dd-acbd-98550a7d7f10/pages
+GET fetch http://localhost:8081/api/v1/documents/9ea120b7-db52-43dd-acbd-98550a7d7f10/pages

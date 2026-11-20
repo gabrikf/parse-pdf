@@ -1,5 +1,5 @@
 GET document http://localhost:8081/
-GET script http://localhost:8081/assets/index-C2xBiNuI.js
+GET script http://localhost:8081/assets/index-DfykD4IQ.js
 GET stylesheet http://localhost:8081/assets/index-Ck1Q70K9.css
 POST fetch http://localhost:8081/api/v1/sessions
 GET font http://localhost:8081/assets/newsreader-latin-wght-italic-Bxi8ein9.woff2
@@ -15,11 +15,10 @@ GET fetch http://localhost:8081/api/v1/budget
 GET fetch http://localhost:8081/api/v1/documents
 GET fetch http://localhost:8081/api/v1/documents
 GET fetch http://localhost:8081/api/v1/documents
-GET fetch http://localhost:8081/api/v1/documents
 GET fetch http://localhost:8081/api/v1/budget
 GET fetch http://localhost:8081/api/v1/documents
 GET fetch http://localhost:8081/api/v1/documents
 GET fetch http://localhost:8081/api/v1/documents
 GET fetch http://localhost:8081/api/v1/budget
-GET fetch http://localhost:8081/api/v1/documents/2fadab59-d805-41f0-958b-2040b96eb3f0/pages
-GET fetch http://localhost:8081/api/v1/documents/2fadab59-d805-41f0-958b-2040b96eb3f0/pages
+GET fetch http://localhost:8081/api/v1/documents/b6ce0512-a95f-4552-beca-56d487076f43/pages
+GET fetch http://localhost:8081/api/v1/documents/b6ce0512-a95f-4552-beca-56d487076f43/pages
