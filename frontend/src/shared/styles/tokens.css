@@ -1,0 +1,52 @@
+/* Design tokens from the approved canvas (AD-020): one purple primary, hairlines, no shadows. */
+:root,
+[data-theme='light'] {
+  color-scheme: light;
+  --bg: #ffffff;
+  --surface: #f7f6fa;
+  --surface-2: #eceaf1;
+  --line: #e6e3ec;
+  --line-strong: #cbc6d5;
+  --text: #16141b;
+  --muted: #6b6676;
+  --primary: #6d28d9;
+  --on-primary: #ffffff;
+  --primary-soft: #f3eefd;
+  --ok: #15803d;
+  --ok-soft: #eaf6ee;
+  --warn: #b45309;
+  --warn-soft: #fdf3e7;
+  --danger: #b91c1c;
+  --danger-soft: #fceded;
+  --on-danger: #ffffff;
+  --scrim: rgb(22 20 27 / 48%);
+  --focus: #6d28d9;
+}
+
+[data-theme='dark'] {
+  color-scheme: dark;
+  --bg: #0e0d12;
+  --surface: #17151d;
+  --surface-2: #221f2a;
+  --line: #2a2733;
+  --line-strong: #3d3948;
+  --text: #edebf2;
+  --muted: #a19dad;
+  --primary: #a78bfa;
+  --on-primary: #0e0d12;
+  --primary-soft: #241b3a;
+  --ok: #4ade80;
+  --ok-soft: #12261a;
+  --warn: #fbbf24;
+  --warn-soft: #2a2110;
+  --danger: #f87171;
+  --danger-soft: #2c1515;
+  --on-danger: #0e0d12;
+  --scrim: rgb(0 0 0 / 62%);
+  --focus: #a78bfa;
+}
+
+:root {
+  --font-ui: 'Schibsted Grotesk Variable', ui-sans-serif, system-ui, sans-serif;
+  --font-read: 'Newsreader Variable', Georgia, serif;
+}

@@ -1,0 +1,54 @@
+.button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 44px;
+  padding: 0 18px;
+  border-radius: 8px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.primary {
+  border: 0;
+  background: var(--primary);
+  color: var(--on-primary);
+  padding: 0 22px;
+}
+
+.secondary {
+  border: 1px solid var(--line-strong);
+  background: transparent;
+  color: var(--text);
+}
+
+.raised {
+  border: 1px solid var(--line-strong);
+  background: var(--bg);
+  color: var(--text);
+}
+
+.dangerOutline {
+  border: 1px solid var(--line-strong);
+  background: var(--bg);
+  color: var(--danger);
+}
+
+.danger {
+  border: 0;
+  background: var(--danger);
+  color: var(--on-danger);
+  padding: 0 22px;
+}
+
+.icon {
+  width: 44px;
+  height: 44px;
+  min-height: 44px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--text);
+}

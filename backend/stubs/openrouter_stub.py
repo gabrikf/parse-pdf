@@ -4,12 +4,12 @@
 - the guardrail model: ``safe`` (``unsafe\\nS1`` when the text holds ``STUB-UNSAFE``);
 - a JSON-schema page request: one markdown page per page the prompt announces;
 - anything else: a markdown summary.
-Text holding ``STUB-FAIL-ONCE`` gets one ``400`` per distinct text, then succeeds, so a
-document can be made ``dead`` and then retried. ``STUB_DELAY_S`` slows every answer.
+Text holding a marker ``STUB-FAIL-ONCE-<token>`` gets one ``400`` for that token, then every
+later call with it succeeds, so a document can be made ``dead`` and then retried.
+``STUB_DELAY_S`` slows every answer.
 """
 
 import asyncio
-import hashlib
 import json
 import os
 import re
@@ -21,6 +21,7 @@ from fastapi.responses import JSONResponse
 app = FastAPI(title="openrouter-stub")
 FAILED_ONCE: set[str] = set()
 PAGES_ANNOUNCED = re.compile(r"The attached PDF has (\d+) pages")
+FAIL_ONCE_MARKER = re.compile(r"STUB-FAIL-ONCE-[A-Za-z0-9-]+")
 CALLS: list[str] = []
 
 
@@ -78,9 +79,9 @@ async def chat_completions(request: Request) -> JSONResponse:
     CALLS.append(model)
     await asyncio.sleep(float(os.environ.get("STUB_DELAY_S", "0")))
 
-    digest = hashlib.sha256(text.encode()).hexdigest()
-    if "STUB-FAIL-ONCE" in text and digest not in FAILED_ONCE:
-        FAILED_ONCE.add(digest)
+    marker = FAIL_ONCE_MARKER.search(text)
+    if marker and marker.group(0) not in FAILED_ONCE:
+        FAILED_ONCE.add(marker.group(0))
         return JSONResponse({"error": {"code": 400, "message": "stub refusal"}}, status_code=400)
 
     if "llama-guard" in model:

@@ -1,0 +1,36 @@
+.dialog {
+  width: 100%;
+  max-width: var(--dialog-width, 560px);
+  max-height: min(1000px, calc(100dvh - 48px));
+  margin: 96px auto auto;
+  padding: 0;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: var(--bg);
+  color: var(--text);
+  overflow: hidden;
+}
+
+.dialog[open] {
+  display: flex;
+  flex-direction: column;
+}
+
+.dialog::backdrop {
+  background: var(--scrim);
+}
+
+@media (min-width: 768px) and (max-width: 1023px) {
+  .dialog {
+    margin: auto;
+  }
+}
+
+@media (max-width: 767px) {
+  .dialog {
+    max-width: 100%;
+    max-height: calc(100dvh - 52px);
+    margin: auto 0 0;
+    border-radius: 16px 16px 0 0;
+  }
+}

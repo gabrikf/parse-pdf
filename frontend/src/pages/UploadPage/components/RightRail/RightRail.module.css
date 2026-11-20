@@ -1,0 +1,90 @@
+.rail {
+  position: sticky;
+  top: 32px;
+  flex: 0 0 300px;
+  display: none;
+  flex-direction: column;
+  gap: 28px;
+  padding-top: 8px;
+}
+
+.section {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.budget {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding-top: 24px;
+  border-top: 1px solid var(--line);
+}
+
+.heading {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--muted);
+}
+
+.parser {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.name {
+  font-weight: 600;
+}
+
+.note,
+.guide {
+  font-size: 14px;
+  color: var(--muted);
+}
+
+.note {
+  font-size: 13px;
+}
+
+.figure {
+  font-variant-numeric: tabular-nums;
+}
+
+.used {
+  font-family: var(--font-read);
+  font-size: 32px;
+  font-weight: 500;
+}
+
+.limit {
+  color: var(--muted);
+}
+
+.meter {
+  height: 6px;
+  border-radius: 3px;
+  background: var(--surface-2);
+  overflow: hidden;
+}
+
+.fill {
+  height: 100%;
+  background: var(--primary);
+}
+
+.privacy {
+  margin: 0;
+  padding-top: 24px;
+  border-top: 1px solid var(--line);
+  font-size: 13px;
+  color: var(--muted);
+}
+
+@media (min-width: 1024px) {
+  .rail {
+    display: flex;
+  }
+}

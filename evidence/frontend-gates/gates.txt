@@ -1,0 +1,21 @@
+# Frontend gates - 2026-11-20T03:51Z
+
+$ npm --prefix frontend run lint
+exit: 0
+
+$ npm --prefix frontend run typecheck
+exit: 0
+
+$ npm --prefix frontend run test -- --reporter=verbose
+ ✓ src/pages/UploadPage/hooks/useActiveDocuments.test.tsx > useActiveDocuments > polls the active list every 2000 ms and stops when it is empty 26ms
+ ✓ src/pages/UploadPage/hooks/useActiveDocuments.test.tsx > useActiveDocuments > refetches the feed when a document leaves the active list 7ms
+ ✓ src/shared/components/Markdown/Markdown.test.tsx > Markdown > markdown shows raw html as literal text 60ms
+ ✓ src/App.test.tsx > App > an unreachable api shows an error with a retry control 1140ms
+ Test Files  3 passed (3)
+      Tests  4 passed (4)
+exit: 0
+
+$ npm --prefix frontend run build
+✓ built in 379ms
+exit: 0
+

@@ -1,0 +1,104 @@
+.header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 10px 10px 20px;
+  border-bottom: 1px solid var(--line);
+}
+
+.titles {
+  flex: 1;
+  min-width: 0;
+}
+
+.title {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 700;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.meta {
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.body {
+  flex: 1 1 auto;
+  overflow-y: auto;
+  padding: 4px 20px 20px;
+  font-family: var(--font-read);
+}
+
+.page {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 18px 0;
+  border-bottom: 1px solid var(--line);
+}
+
+.number {
+  font-family: var(--font-ui);
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--muted);
+}
+
+.text {
+  margin: 0;
+  font-size: 17px;
+  line-height: 1.55;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.markdown {
+  font-size: 17px;
+  line-height: 1.55;
+  overflow-wrap: anywhere;
+}
+
+.markdown h1,
+.markdown h2 {
+  margin: 0 0 8px;
+  font-size: 22px;
+  font-weight: 600;
+  line-height: 1.2;
+}
+
+.markdown h3,
+.markdown h4 {
+  margin: 0 0 8px;
+  font-size: 17px;
+  font-weight: 600;
+  font-style: italic;
+}
+
+.markdown p {
+  margin: 0 0 10px;
+}
+
+.markdown table {
+  border-collapse: collapse;
+  font-size: 15px;
+}
+
+.markdown td,
+.markdown th {
+  padding: 4px 8px;
+  border: 1px solid var(--line);
+}
+
+.footer {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  padding-top: 16px;
+  font-family: var(--font-ui);
+  font-size: 13px;
+  color: var(--muted);
+}

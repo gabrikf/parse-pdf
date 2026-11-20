@@ -1,0 +1,89 @@
+.row {
+  display: flex;
+  gap: 16px;
+  overflow-x: auto;
+  padding: 4px 0 20px;
+  border-bottom: 1px solid var(--line);
+}
+
+.story {
+  flex: 0 0 72px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--text);
+  text-decoration: none;
+}
+
+.add {
+  width: 66px;
+  height: 66px;
+  border-radius: 50%;
+  border: 1.5px dashed var(--line-strong);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--primary);
+}
+
+.ring {
+  width: 66px;
+  height: 66px;
+  padding: 3px;
+  border-radius: 50%;
+  display: flex;
+}
+
+.queued {
+  border: 2px dashed var(--line-strong);
+}
+
+.processing {
+  border: 2.5px solid var(--primary);
+}
+
+.disc {
+  flex: 1;
+  border-radius: 50%;
+  background: var(--surface-2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--muted);
+}
+
+.caption {
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.name {
+  width: 72px;
+  font-size: 12px;
+  text-align: center;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.status {
+  margin-top: -6px;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+@media (max-width: 767px) {
+  .row {
+    padding: 14px 16px;
+  }
+}
+
+@media (min-width: 768px) and (max-width: 1023px) {
+  .row {
+    padding: 4px 0 18px;
+  }
+}

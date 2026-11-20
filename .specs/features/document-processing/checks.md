@@ -3,7 +3,7 @@
 Build: `cd backend && ../.venv/bin/ruff check . && ../.venv/bin/ruff format --check . && ../.venv/bin/mypy && ../.venv/bin/lint-imports`; `npm --prefix frontend run lint`; `npm --prefix frontend run typecheck`; `npm --prefix frontend run build`
 Run backend: `docker compose -f compose.test.yaml up -d --wait >/dev/null 2>&1 && cd backend && ../.venv/bin/python -m pytest -v`
 Run web: `npm --prefix frontend run test -- --reporter=verbose`
-Run e2e: `npm --prefix frontend run e2e -- --reporter=list`
+Run e2e: `npm --prefix frontend run e2e`
 Plan: `.specs/features/document-processing/plan.md`
 
 82 checks in 7 slices · 13 one-way doors · 0 open, of which 0 block
@@ -422,6 +422,6 @@ Proof: run backend | test_ensure_bucket_twice_in_a_row_is_a_no_op PASSED
 
 - **Settled mid-build:** none
 - **Dispatched:** none yet
-- **Boundary:** S1-S5 backend proofs green in the working tree; nothing committed yet
-- **Abandoned:** a `ProcessPoolExecutor` for inspection and parsing (it cannot kill a hung child; AD-026)
-- **Walked:** not yet
+- **Boundary:** S1-S5 committed in 0967d3c (AD-033), C82 in a5244c8, C1's clean-checkout record in a5f5361; S6 (C54-C73) and S7 (C74-C80) committed after them; every slice pushed to `origin/main`
+- **Abandoned:** a `ProcessPoolExecutor` for inspection and parsing (it cannot kill a hung child; AD-026); `--reporter=list` on the e2e Run line (a CLI reporter replaces the config's, so no HTML report was written: the Run line now uses the config's list and HTML reporters); the stub's fail-once keyed on the whole text (a retried document's summary call was refused again; AD-034)
+- **Walked:** on the Vite dev server (`.claude/launch.json`, port 5180, `/api` proxied to the e2e stack) by `frontend/captures/running.capture.ts` at each frame's size, every state reached from the one route `/`: empty feed (first visit) -> upload dialog with 3 files, 1 refused ("Upload PDFs" in the rail or tab bar) -> stories row with 2 active files -> Parsed feed with a ready, a no_text and a ready card -> pages sheet ("View all 85 pages") -> reparse confirmation (the card's reparse icon) -> Failed chip with a dead and a too_large card -> Delete forever confirmation (the dead card's button); each state saved as `captures/<Frame>.running.png` and compared with its frame by eye before commit (the reparse parser rows and the upload dialog's "Add more files" were fixed to match)

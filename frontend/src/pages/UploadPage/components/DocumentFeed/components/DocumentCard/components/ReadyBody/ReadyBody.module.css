@@ -1,0 +1,102 @@
+.summary {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 20px 22px;
+  border-radius: 12px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+}
+
+.label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--muted);
+}
+
+.markdown {
+  font-family: var(--font-read);
+  color: var(--text);
+}
+
+.markdown > div > :first-child {
+  margin-top: 0;
+}
+
+.markdown p {
+  margin: 0 0 10px;
+  font-size: 18px;
+  line-height: 1.5;
+}
+
+.markdown h1,
+.markdown h2,
+.markdown h3,
+.markdown h4 {
+  margin: 4px 0 6px;
+  font-family: var(--font-ui);
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--muted);
+}
+
+.markdown ul,
+.markdown ol {
+  margin: 0;
+  padding-left: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 16px;
+  line-height: 1.45;
+}
+
+.actions {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  margin: 0 -10px;
+}
+
+.copied {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--ok);
+}
+
+.spacer {
+  flex: 1 1 auto;
+}
+
+.preview {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.firstPage {
+  margin: 0;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.firstPage strong {
+  font-weight: 600;
+}
+
+.firstPage span {
+  font-family: var(--font-read);
+  font-size: 16px;
+}
+
+.viewAll {
+  align-self: flex-start;
+  min-height: 44px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--muted);
+  font-size: 14px;
+}

@@ -21,7 +21,10 @@ from app.repositories.document_repository import (
 )
 from app.storage.object_storage import ObjectStorage
 
-NO_TEXT_HINT = f"No text was found. Try the {ParserKind.GEMINI.value} parser, which reads scans."
+NO_TEXT_HINT = (
+    "This usually means a scanned PDF or a photo of a page. "
+    f"Try the {ParserKind.GEMINI.value} parser, which reads scans."
+)
 log = get_logger("process_document")
 
 

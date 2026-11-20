@@ -1,0 +1,85 @@
+.rail {
+  position: sticky;
+  top: 0;
+  flex: 0 0 72px;
+  height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  gap: 28px;
+  /* 11 + 48 (item) + 11 + 1 (border) fits the canvas's 72 px; 12 px would push the rail to 73. */
+  padding: 28px 11px;
+  border-right: 1px solid var(--line);
+}
+
+.wordmark {
+  display: none;
+  padding: 0 12px;
+  font-family: var(--font-read);
+  font-style: italic;
+  font-size: 28px;
+  font-weight: 500;
+  letter-spacing: -0.01em;
+}
+
+.wordmark span,
+.logo {
+  color: var(--primary);
+}
+
+.logo {
+  display: flex;
+  justify-content: center;
+}
+
+.items {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.item {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  min-height: 48px;
+  padding: 0 12px;
+  border: 0;
+  border-radius: 10px;
+  background: transparent;
+  color: var(--text);
+}
+
+.current {
+  background: var(--surface);
+  font-weight: 700;
+}
+
+.label {
+  display: none;
+}
+
+@media (max-width: 767px) {
+  .rail {
+    display: none;
+  }
+}
+
+@media (min-width: 1280px) {
+  .rail {
+    flex-basis: 244px;
+  }
+
+  .wordmark,
+  .label {
+    display: inline;
+  }
+
+  .logo {
+    display: none;
+  }
+
+  .item {
+    justify-content: flex-start;
+  }
+}
