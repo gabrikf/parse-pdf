@@ -10,6 +10,9 @@
 # The hiring company's test brief stays private
 docs/private/
 
+# tlc-spec-lean run record, written at HEAD (AD-048)
+.specs/features/*/proofs.md
+
 # Python
 .venv/
 __pycache__/

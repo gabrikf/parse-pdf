@@ -12,6 +12,11 @@
   overflow: hidden;
 }
 
+/* The height is clamped by max-height, so a full sheet ends where each layout's dialog ends. */
+.full {
+  height: 100%;
+}
+
 .dialog[open] {
   display: flex;
   flex-direction: column;

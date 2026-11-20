@@ -75,3 +75,13 @@
   justify-content: flex-end;
   gap: 10px;
 }
+
+.error {
+  margin: 0;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: var(--danger-soft);
+  color: var(--danger);
+  font-size: 14px;
+  line-height: 1.45;
+}

@@ -56,6 +56,30 @@ test('delete forever removes the card and it stays gone after reload', async ({ 
   await expect(card(page, SAMPLE.dummy)).toHaveCount(0)
 })
 
+test('a refused action keeps its confirmation open with the reason and refreshes the feed', async ({ page }, info) => {
+  await openApp(page)
+  const ready = await uploadAndWait(page, sample(SAMPLE.dummy))
+  const listed = await (await page.request.get('/api/v1/documents?state=all&limit=50')).json()
+  const document = (listed.data as { id: string; filename: string }[]).find((item) => item.filename === SAMPLE.dummy)
+  expect(document).toBeDefined()
+
+  await ready.getByRole('button', { name: `Delete ${SAMPLE.dummy}` }).click()
+  const confirm = page.getByRole('alertdialog', { name: `Delete ${SAMPLE.dummy} forever?` })
+  // Another tab deletes it while this confirmation is open.
+  expect((await page.request.delete(`/api/v1/documents/${document?.id}`)).status()).toBe(200)
+
+  const refused = page.waitForResponse((response) => response.request().method() === 'DELETE' && response.status() === 404)
+  await confirm.getByRole('button', { name: 'Delete forever' }).click()
+  await refused
+  await expect(confirm).toBeVisible()
+  await expect(confirm.getByRole('alert')).toHaveText('This document is gone. It may have been deleted in another tab.')
+  await expect(card(page, SAMPLE.dummy)).toHaveCount(0)
+  await shot(page, info, 'action-refused')
+
+  await confirm.getByRole('button', { name: 'Cancel' }).click()
+  await expect(confirm).toBeHidden()
+})
+
 test('retry a dead document moves it to the stories row as queued', async ({ page }, info) => {
   await openApp(page)
   const file = failOnceFile('refused-once.pdf')
@@ -97,7 +121,12 @@ test('a too_large card offers only delete forever', async ({ page }, info) => {
   const buttons = large.getByRole('button').filter({ hasNotText: /^$/ })
   await expect(buttons).toHaveText(['Delete forever'])
   await large.getByRole('button', { name: /More actions/ }).click()
-  await expect(page.getByRole('menuitem')).toHaveText(['Delete forever'])
+  const menu = page.getByRole('list', { name: 'Actions for thousand-pages.pdf' })
+  await expect(menu.getByRole('button')).toHaveText(['Delete forever'])
+  await page.keyboard.press('Escape')
+  await expect(menu).toHaveCount(0)
+  await expect(large.getByRole('button', { name: /More actions/ })).toBeFocused()
+  await large.getByRole('button', { name: /More actions/ }).click()
   await shot(page, info, 'too-large-card')
 })
 

@@ -21,6 +21,7 @@ class DocumentScripts:
     finalize: AsyncScript
     restart_run: AsyncScript
     delete: AsyncScript
+    note_failure: AsyncScript
 
     @classmethod
     def register(cls, redis: Redis) -> "DocumentScripts":
@@ -32,4 +33,5 @@ class DocumentScripts:
             finalize=redis.register_script(_source("finalize")),
             restart_run=redis.register_script(_source("restart_run")),
             delete=redis.register_script(_source("delete")),
+            note_failure=redis.register_script(_source("note_failure")),
         )

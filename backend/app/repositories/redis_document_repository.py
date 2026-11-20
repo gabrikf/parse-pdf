@@ -8,6 +8,7 @@ from redis.asyncio import Redis
 from app.core.clock import to_iso
 from app.documents.domain.document import Document
 from app.documents.domain.document_status import DocumentStatus, FeedState, group_of
+from app.documents.domain.failure_cause import UNKNOWN_CAUSE, exhausted_hint_prefix
 from app.documents.domain.page import Page
 from app.documents.domain.parser_kind import ParserKind
 from app.queue.job import STREAM_KEY
@@ -134,8 +135,13 @@ class RedisDocumentRepository:
             chunks_key(document_id),
         ]
         args: list[str | int] = [run_id, max_deliveries, to_iso(at), self._ttl, document_id]
+        args += [exhausted_hint_prefix(max_deliveries), UNKNOWN_CAUSE]
         outcome, _ = await self._scripts.begin_run(keys=keys, args=args)
         return RunStart(RunStartOutcome(outcome), await self.get(document_id))
+
+    async def note_failure(self, document_id: str, run_id: str, cause: str) -> None:
+        """Remember why the current run's delivery failed; a stale run writes nothing."""
+        await self._scripts.note_failure(keys=[doc_key(document_id)], args=[run_id, cause])
 
     async def save_chunk(
         self, document_id: str, run_id: str, index: int, pages: list[Page]

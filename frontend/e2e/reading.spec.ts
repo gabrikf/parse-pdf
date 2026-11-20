@@ -24,6 +24,18 @@ test('the pages sheet shows 50 pages and loads the next 50', async ({ page }, in
   await expect(sheet.getByRole('button', { name: 'Load the next 50 pages' })).toHaveCount(0)
 })
 
+test('the pages sheet opens at full height even for one page', async ({ page }) => {
+  await openApp(page)
+  const ready = await uploadAndWait(page, sample(SAMPLE.dummy))
+
+  await ready.getByRole('button', { name: 'View all 1 page' }).click()
+  const sheet = page.getByRole('dialog', { name: SAMPLE.dummy })
+  await expect(sheet.getByRole('article', { name: /^Page \d+$/ })).toHaveCount(1)
+  const [height, maxHeight] = await sheet.evaluate((element) => [element.getBoundingClientRect().height, getComputedStyle(element).maxHeight])
+  expect(maxHeight).toMatch(/^\d+(\.\d+)?px$/)
+  expect(Math.abs(height - Number.parseFloat(maxHeight))).toBeLessThanOrEqual(1)
+})
+
 test('a no_text card shows its hint and reparses with gemini', async ({ page }, info) => {
   await openApp(page)
   const scanned = await uploadAndWait(page, sample(SAMPLE.scanned), 'no_text')

@@ -11,6 +11,9 @@ import { confirmCopy } from './utils'
 
 interface ConfirmDialogProps {
   request: ConfirmRequest | null
+  /** Why the API refused the last try; the dialog stays open to show it. */
+  error: string | null
+  pending: boolean
   onCancel: () => void
   onConfirm: (request: ConfirmRequest) => void
 }
@@ -38,7 +41,7 @@ function ParserChoice({ value, onChange }: { value: ParserValue; onChange: (pars
   )
 }
 
-function ConfirmBody({ request, onCancel, onConfirm }: ConfirmDialogProps & { request: ConfirmRequest }) {
+function ConfirmBody({ request, error, pending, onCancel, onConfirm }: ConfirmDialogProps & { request: ConfirmRequest }) {
   const [parser, setParser] = useState<ParserValue>(request.parser ?? request.document.parser)
   const copy = confirmCopy(request)
   const reparse = request.action === ACTION.reparse
@@ -52,12 +55,18 @@ function ConfirmBody({ request, onCancel, onConfirm }: ConfirmDialogProps & { re
         {copy.body}
       </p>
       {reparse ? <ParserChoice value={parser} onChange={setParser} /> : null}
+      {error ? (
+        <p role="alert" className={styles.error}>
+          {error}
+        </p>
+      ) : null}
       <div className={styles.footer}>
         <Button variant="secondary" onClick={onCancel}>
           Cancel
         </Button>
         <Button
           variant={request.action === ACTION.remove ? 'danger' : 'primary'}
+          aria-busy={pending}
           onClick={() => onConfirm(reparse ? { ...request, parser } : request)}
         >
           {copy.confirm}
@@ -68,13 +77,15 @@ function ConfirmBody({ request, onCancel, onConfirm }: ConfirmDialogProps & { re
 }
 
 /** Asks before a reparse, a retry or a permanent delete; Cancel sends nothing (criterion 62). */
-export function ConfirmDialog({ request, onCancel, onConfirm }: ConfirmDialogProps) {
+export function ConfirmDialog({ request, error, pending, onCancel, onConfirm }: ConfirmDialogProps) {
   return (
     <Dialog open={request !== null} onClose={onCancel} labelledBy="confirm-title" describedBy="confirm-text" role="alertdialog" width={440}>
       {request ? (
         <ConfirmBody
           key={`${request.action}-${request.document.id}`}
           request={request}
+          error={error}
+          pending={pending}
           onCancel={onCancel}
           onConfirm={onConfirm}
         />

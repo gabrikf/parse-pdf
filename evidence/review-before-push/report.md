@@ -2,8 +2,11 @@
 
 `scripts/review-before-push.sh 945baf5 HEAD` printed 6 lanes and the judge. Each lane ran as a
 read-only sub-agent over its own file list; the judge (`code-polish --review`) ran in the build
-session against the bar the script printed. A person confirms every applied fix below; this is not
-a pass.
+session against the bar the script printed. This is not a pass.
+
+**Confirmed by the user on 2026-11-20** (asked in the planning session): "Confirm all 6, push".
+The 6 applied fixes below (commit `6fa730d`) are confirmed. The Open items were then decided under
+AD-023 and fixed in the commit after it (AD-042..AD-047).
 
 | Lane | Skill | Findings |
 | --- | --- | --- |

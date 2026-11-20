@@ -101,6 +101,10 @@ class DocumentRepository(Protocol):
         """Count a delivery and mark ``processing`` when the run is current."""
         ...
 
+    async def note_failure(self, document_id: str, run_id: str, cause: str) -> None:
+        """Record why a delivery of the current run failed (shown when the tries run out)."""
+        ...
+
     async def save_chunk(
         self, document_id: str, run_id: str, index: int, pages: list[Page]
     ) -> None:

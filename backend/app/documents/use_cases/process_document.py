@@ -6,6 +6,7 @@ from app.core.clock import Clock
 from app.core.logging import get_logger
 from app.documents.domain.document import Document
 from app.documents.domain.document_status import DocumentStatus
+from app.documents.domain.failure_cause import UNEXPECTED_CAUSE, describe_cause
 from app.documents.domain.job_errors import PermanentFailure, TransientFailure
 from app.documents.domain.page import Page
 from app.documents.domain.parser_kind import ParserKind
@@ -99,9 +100,13 @@ class ProcessDocumentUseCase:
             bound.warning("job_failed", error_code=failure.code)
             result = FinalResult(DocumentStatus.DEAD, pages=[], error_code=failure.code)
             await self._dead_letter(start.document, failure.code)
-        except TransientFailure:
+        except TransientFailure as failure:
             bound.warning("job_left_pending", deliveries=start.document.deliveries)
+            await self._note(job, describe_cause(str(failure)))
             return JobOutcome.PENDING
+        except Exception:
+            await self._note(job, UNEXPECTED_CAUSE)
+            raise
 
         await self._repository.finalize(job.document_id, job.run_id, result, self._clock.now())
         await self._queue.ack(job)
@@ -119,6 +124,13 @@ class ProcessDocumentUseCase:
 
         summary = await self._summaries.summarize(pages)
         return FinalResult(DocumentStatus.READY, pages=pages, summary=summary)
+
+    async def _note(self, job: Job, cause: str) -> None:
+        """Keep the cause for the ``max_deliveries`` hint; never mask the failure being handled."""
+        try:
+            await self._repository.note_failure(job.document_id, job.run_id, cause)
+        except Exception:
+            log.exception("note_failure_failed", document_id=job.document_id)
 
     async def _dead_letter(self, document: Document, error_code: str) -> None:
         letter = DeadLetter(document.id, document.run_id, error_code, document.deliveries)

@@ -21,7 +21,7 @@ end
 
 redis.call('HSET', KEYS[1], 'status', 'queued', 'run_id', ARGV[2], 'parser', ARGV[3],
   'deliveries', 0, 'updated_at', ARGV[4])
-redis.call('HDEL', KEYS[1], 'summary', 'error_code', 'hint')
+redis.call('HDEL', KEYS[1], 'summary', 'error_code', 'hint', 'last_error')
 redis.call('DEL', KEYS[2], KEYS[3])
 redis.call('ZREM', KEYS[5], ARGV[6])
 redis.call('ZREM', KEYS[6], ARGV[6])

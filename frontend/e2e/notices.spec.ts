@@ -22,10 +22,18 @@ test('a rate-limited upload shows the wait in seconds', async ({ page }, info) =
   expect(retryAfter).toBeGreaterThan(0)
 
   await dialog.getByRole('button', { name: 'Close' }).click()
-  const notice = page.getByRole('status').filter({ hasText: 'Too many uploads in the last minute.' })
-  await expect(notice).toHaveText(/You can upload again in \d+ s\.$/)
-  const shown = Number((await notice.textContent())?.match(/in (\d+) s/)?.[1])
+  const notice = page.getByText(/^Too many uploads in the last minute\. You can upload again in \d+ s\.$/)
+  await expect(notice).toBeVisible()
+  const secondsOnScreen = async () => Number((await notice.textContent())?.match(/in (\d+) s/)?.[1])
+  const shown = await secondsOnScreen()
   expect(shown).toBeLessThanOrEqual(retryAfter)
   expect(shown).toBeGreaterThan(retryAfter - 5)
+
+  // The live region says the wait once; the ticking text on screen is not inside it.
+  const announced = page.getByRole('status').filter({ hasText: 'Too many uploads in the last minute.' })
+  await expect(announced).toHaveText(/^Too many uploads in the last minute\. You can upload again in \d+ seconds\.$/)
+  const firstAnnouncement = await announced.textContent()
+  await expect.poll(secondsOnScreen, { timeout: 5000 }).toBeLessThan(shown)
+  await expect(announced).toHaveText(firstAnnouncement ?? '')
   await shot(page, info, 'rate-limited')
 })

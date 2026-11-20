@@ -338,5 +338,4 @@ whose outcome only is written down) are kept in `evidence/` in the repository.
 
 ## Time spent
 
-Planning, design and the harness on 2026-11-19; the build on 2026-11-19 and 2026-11-20, mostly
-run by the agent unattended between my reviews.
+_To be filled in by the author._

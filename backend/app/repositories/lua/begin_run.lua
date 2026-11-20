@@ -1,12 +1,13 @@
 -- A worker starts (or resumes) a run. Compare-and-set on run_id: a stale entry changes nothing.
 -- KEYS: 1 doc hash, 2 feed (all), 3 feed active, 4 feed failed, 5 pages, 6 chunks
--- ARGV: 1 run id, 2 max deliveries, 3 updated_at, 4 ttl, 5 document id
+-- ARGV: 1 run id, 2 max deliveries, 3 updated_at, 4 ttl, 5 document id,
+--       6 hint prefix when the tries run out, 7 cause when none was recorded
 -- Returns {outcome, deliveries}: stale | already_final | exhausted | started
 if redis.call('EXISTS', KEYS[1]) == 0 then
   return {'stale', 0}
 end
 
-local cur = redis.call('HMGET', KEYS[1], 'run_id', 'status', 'deliveries', 'created_ms')
+local cur = redis.call('HMGET', KEYS[1], 'run_id', 'status', 'deliveries', 'created_ms', 'last_error')
 if cur[1] ~= ARGV[1] then
   return {'stale', 0}
 end
@@ -25,7 +26,12 @@ redis.call('HSET', KEYS[1], 'deliveries', deliveries, 'updated_at', ARGV[3])
 local outcome = 'started'
 if deliveries > tonumber(ARGV[2]) then
   outcome = 'exhausted'
-  redis.call('HSET', KEYS[1], 'status', 'dead', 'error_code', 'max_deliveries')
+  local cause = cur[5]
+  if not cause or cause == '' then
+    cause = ARGV[7]
+  end
+  redis.call('HSET', KEYS[1], 'status', 'dead', 'error_code', 'max_deliveries',
+    'hint', ARGV[6] .. cause .. '.')
   redis.call('ZREM', KEYS[3], ARGV[5])
   redis.call('ZADD', KEYS[4], cur[4], ARGV[5])
   redis.call('DEL', KEYS[6])

@@ -128,6 +128,10 @@ async def test_sixth_delivery_is_dead_letter_with_no_calls(
     if status == "dead":
         assert chat.calls == []
         assert await redis.hget(f"doc:{document_id}", "error_code") == "max_deliveries"
+        assert await redis.hget(f"doc:{document_id}", "hint") == (
+            "Processing stopped after 5 tries. The last error was: "
+            "the worker stopped before it finished."
+        )
         letters = cast("list[tuple[str, dict[str, str]]]", await redis.xrange(DEAD_LETTER_KEY))
         ((_, letter),) = letters
         assert letter == {

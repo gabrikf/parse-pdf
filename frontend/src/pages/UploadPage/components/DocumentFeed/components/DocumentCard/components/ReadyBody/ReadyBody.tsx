@@ -8,17 +8,21 @@ import { Button } from '../../../../../../../../shared/components/Button'
 import { Markdown } from '../../../../../../../../shared/components/Markdown'
 import { SUMMARY_MODEL_NAME } from '../../../../../../../../shared/constants/parsers'
 import { useCopied } from '../../../../../../../../shared/hooks/useCopied'
+import { useNearViewport } from '../../../../../../../../shared/hooks/useNearViewport'
 import { plural } from '../../../../../../../../shared/utils/format'
 import { ACTION, type CardHandlers } from '../../../../types'
 import styles from './ReadyBody.module.css'
 
-/** A `ready` card: the summary, the actions, and the start of page 1 (criteria 60, 71). */
+/** A `ready` card: the summary, the actions, and the start of page 1 (criteria 60, 71). Page 1 is
+ * fetched only when the card comes near the viewport, not for every card of the feed. */
 export function ReadyBody({ document, handlers }: { document: DocumentDto; handlers: CardHandlers }) {
   const { copied, copy } = useCopied()
+  const [previewRef, near] = useNearViewport<HTMLDivElement>()
   const firstPage = useQuery({
     queryKey: queryKeys.firstPage(document.id, document.updated_at),
     queryFn: async () => (await getPages(document.id, 0, 1)).data[0] ?? null,
     staleTime: Infinity,
+    enabled: near,
   })
   const summary = document.summary ?? ''
 
@@ -46,7 +50,7 @@ export function ReadyBody({ document, handlers }: { document: DocumentDto; handl
           <Trash2 size={22} strokeWidth={1.75} aria-hidden="true" />
         </Button>
       </div>
-      <div className={styles.preview}>
+      <div ref={previewRef} className={styles.preview}>
         {firstPage.data ? (
           <p className={styles.firstPage}>
             <strong>Page 1</strong> <span>{firstPage.data.content}</span>

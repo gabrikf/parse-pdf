@@ -33,7 +33,7 @@ export function PagesSheet({ document, onClose }: { document: DocumentDto | null
   const format = list[0]?.format ?? 'text'
 
   return (
-    <Dialog open={document !== null} onClose={onClose} labelledBy="pages-title" width={680}>
+    <Dialog open={document !== null} onClose={onClose} labelledBy="pages-title" width={680} fullHeight>
       <header className={styles.header}>
         <div className={styles.titles}>
           <h2 id="pages-title" className={styles.title}>

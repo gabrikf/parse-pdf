@@ -4,9 +4,9 @@ import { useState } from 'react'
 import type { DocumentDto } from '../../shared/api/types'
 import { FEED_STATE } from '../../shared/api/types'
 import { useTheme } from '../../shared/hooks/useTheme'
-import { ConfirmDialog, type ConfirmRequest } from './components/ConfirmDialog'
+import { ConfirmDialog } from './components/ConfirmDialog'
 import { DocumentFeed } from './components/DocumentFeed'
-import { ACTION, type CardHandlers } from './components/DocumentFeed/types'
+import type { CardHandlers } from './components/DocumentFeed/types'
 import { EmptyChip, EmptyFeed } from './components/EmptyFeed'
 import { FeedChips, type ChipValue } from './components/FeedChips'
 import { Notices } from './components/Notices'
@@ -21,7 +21,7 @@ import { EMPTY_CHIP } from './constants'
 import { useNotice } from './context/notice'
 import { useActiveDocuments } from './hooks/useActiveDocuments'
 import { useBudget } from './hooks/useBudget'
-import { useDocumentActions } from './hooks/useDocumentActions'
+import { useConfirmFlow } from './hooks/useConfirmFlow'
 import { useFeed } from './hooks/useFeed'
 import { useReportError } from './hooks/useReportError'
 import { useSession } from './hooks/useSession'
@@ -36,14 +36,13 @@ export function UploadPage() {
   const [chip, setChip] = useState<ChipValue>(FEED_STATE.parsed)
   const [uploading, setUploading] = useState(false)
   const [reading, setReading] = useState<DocumentDto | null>(null)
-  const [asking, setAsking] = useState<ConfirmRequest | null>(null)
 
   const session = useSession()
   const ready = session.isSuccess
   const feed = useFeed(chip, ready)
   const active = useActiveDocuments(ready)
   const budget = useBudget(ready)
-  const actions = useDocumentActions()
+  const confirmFlow = useConfirmFlow()
   const openStory = useStoryScroll(feed.documents, () => setChip(FEED_STATE.all))
 
   useReportError(session.error)
@@ -55,20 +54,12 @@ export function UploadPage() {
   const nothingYet = ready && feed.counts?.all === 0 && activeDocuments.length === 0
   const handlers: CardHandlers = {
     onOpenPages: setReading,
-    onAsk: (action, document, parser) => setAsking(parser ? { action, document, parser } : { action, document }),
+    onAsk: (action, document, parser) => confirmFlow.ask(parser ? { action, document, parser } : { action, document }),
   }
 
   const retry = () => {
     clearOffline()
     void client.refetchQueries({ type: 'active' })
-  }
-
-  const confirm = (request: ConfirmRequest) => {
-    setAsking(null)
-    const { id } = request.document
-    if (request.action === ACTION.reparse && request.parser) actions.reparse.mutate({ id, parser: request.parser })
-    if (request.action === ACTION.requeue) actions.requeue.mutate(id)
-    if (request.action === ACTION.remove) actions.remove.mutate(id)
   }
 
   const showFeed = () => window.scrollTo({ top: 0 })
@@ -104,7 +95,13 @@ export function UploadPage() {
       <TabBar theme={theme} onToggleTheme={toggle} onUpload={openUpload} onFeed={showFeed} />
       <UploadDialog open={uploading} onClose={() => setUploading(false)} />
       <PagesSheet document={reading} onClose={() => setReading(null)} />
-      <ConfirmDialog request={asking} onCancel={() => setAsking(null)} onConfirm={confirm} />
+      <ConfirmDialog
+        request={confirmFlow.asking}
+        error={confirmFlow.error}
+        pending={confirmFlow.pending}
+        onCancel={confirmFlow.cancel}
+        onConfirm={confirmFlow.confirm}
+      />
     </div>
   )
 }
