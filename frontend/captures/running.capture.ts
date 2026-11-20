@@ -96,6 +96,8 @@ test.describe('phone light frames', () => {
     await chip(page, 'Failed').click()
     await expectStatus(page, 'scan-0412.pdf', 'dead')
     await expectStatus(page, 'archive-2019.pdf', 'too_large')
+    // The frames draw the stories row: two files in flight, not a race with the dummy's parse.
+    await withStories(page, GEMINI)
     await save(page, 'PhoneFailed')
 
     await card(page, 'scan-0412.pdf').getByRole('button', { name: 'Delete forever' }).click()
