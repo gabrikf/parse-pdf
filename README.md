@@ -356,15 +356,61 @@ whose outcome only is written down) are kept in `evidence/` in the repository.
 
 ## What I would do next
 
+**Product**
+
+- **Search.** By filename first: a server-side filter on the session's list, so it works across
+  every page of the paginated feed. Then by meaning: page texts and summaries embedded into a
+  vector database (pgvector or Qdrant) when a document reaches `ready`, so "the contract that
+  mentions a penalty" finds the right page even when no title says so.
+- **Keep documents beyond 7 days.** Records move to a durable database (Postgres), PDFs get a
+  storage lifecycle per plan, and Redis goes back to what it is best at: the queue, rate limits
+  and a cache. A person chooses how long their files are kept and can export them.
+- **Sign-in with OAuth2 / OpenID Connect** (Google, GitHub, Microsoft) in place of anonymous
+  sessions, so documents belong to an account, follow it across devices, and limits and the
+  model budget are counted per person.
 - Server-sent events instead of 2 s polling, once there are many open pages.
-- A per-session model page budget on top of the global one.
-- Streaming uploads to the bucket instead of reading each file into memory (50 MiB each, 20 per
-  request, 2 requests per session).
 - Per-document guardrail overrides: today `GUARDRAIL_ALLOWED_CATEGORIES` applies to every upload.
 - Prompt-injection detection: Llama Guard catches unsafe content, not instructions hidden in a PDF;
   today delimiters and the system message are the only defense.
 - An admin view of `docs:dead` with a bulk retry.
 
+**Running it for real**
+
+- **Deploy, then measure where to scale.** The API is stateless and the workers scale on their
+  own, so the first deploy would watch stream lag, pending entries, OpenRouter latency and the
+  rate limiter's waits under real traffic, and scale the part that is actually the bottleneck
+  (more workers, a larger Redis, or a higher provider limit) instead of guessing. The load proofs
+  in `evidence/concurrency/` are the baseline.
+- Streaming uploads to the bucket instead of reading each file into memory (50 MiB each, 20 per
+  request, 2 requests per session).
+
+**How the team ships it**
+
+- **Protected branches and a git flow.** `main` takes changes only through pull requests with a
+  review and green checks; no direct pushes, no force pushes.
+- **CI/CD pipelines with environments.** The gates that run locally today (lint, `mypy --strict`,
+  the 85% coverage gate, Playwright, the review lanes) run on every pull request; a merge deploys
+  to staging, and production needs a manual approval, with secrets held by the platform, never
+  in the repository.
+
 ## Time spent
 
-_To be filled in by the author._
+About **2 hours of my own time**, spent where judgement matters most: understanding the problem,
+deciding what to build, and checking the result.
+
+| Step | Time |
+| --- | --- |
+| Reading the brief and understanding the problem, its priorities and its gaps | 15 min |
+| Planning with `tlc-spec-lean`: every product question answered, 81 criteria approved | 30 min |
+| Designing the page with `frontend-blueprint`: prototyping, finding problems, redoing frames until they felt right | 20 min |
+| Building with `tlc-spec-lean`, manual testing and small fixes | about 55 min |
+
+The build is where the earlier steps paid off. The plan and the design were precise enough, and
+the harness strict enough (hooks on every edit, the coverage gate, Playwright at 6 sizes, an
+independent reviewer), that the agent built the slices on its own while I worked on other things.
+My time went into what an agent should not decide alone: reviewing each slice, testing the app by
+hand on phone and desktop, and turning what I found into small, recorded fixes. Manual testing,
+including a real, dense 10-page lab report, led to AD-053 to AD-056: an Upload button that
+disappeared, a safety check that was too strict, GPT-5 Mini calls sized to their deadline, and
+failure messages that say why. The clock ran longer than 2 hours, but most of that was unattended build time, which
+is the point of setting the work up this way.
