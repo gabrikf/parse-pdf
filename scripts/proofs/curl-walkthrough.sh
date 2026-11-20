@@ -4,6 +4,7 @@
 set -euo pipefail
 
 root="$(cd "$(dirname "$0")/../.." && pwd)"
+evidence="${EVIDENCE_DIR:-$root/evidence}"  # AD-038: check_proofs runs write outside the repo
 base="$("$root/scripts/proofs/e2e-stack.sh")"
-mkdir -p "$root/evidence/curl-walkthrough"
-python3 "$root/scripts/proofs/curl_walkthrough.py" "$base" | tee "$root/evidence/curl-walkthrough/run.txt"
+mkdir -p "$evidence/curl-walkthrough"
+python3 "$root/scripts/proofs/curl_walkthrough.py" "$base" | tee "$evidence/curl-walkthrough/run.txt"

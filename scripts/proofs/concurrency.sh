@@ -3,8 +3,9 @@
 set -euo pipefail
 
 root="$(cd "$(dirname "$0")/../.." && pwd)"
+evidence="${EVIDENCE_DIR:-$root/evidence}"  # AD-038: check_proofs runs write outside the repo
 base="$("$root/scripts/proofs/e2e-stack.sh")"
-mkdir -p "$root/evidence/concurrency"
+mkdir -p "$evidence/concurrency"
 {
   echo "# Criterion 22 load proof"
   echo "date: $(date -u +%Y-%m-%dT%H:%M:%SZ)"
@@ -15,4 +16,4 @@ mkdir -p "$root/evidence/concurrency"
   docker compose -p parse-pdf-e2e ps --format '  {{.Name}} {{.Status}}'
   echo
   "$root/.venv/bin/python" "$root/scripts/load/load_test.py" --base "$base" --project parse-pdf-e2e
-} | tee "$root/evidence/concurrency/load-test.txt"
+} | tee "$evidence/concurrency/load-test.txt"

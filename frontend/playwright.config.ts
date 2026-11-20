@@ -1,5 +1,7 @@
 import { defineConfig, devices } from '@playwright/test'
 
+import { evidencePath } from './e2e/support/evidence'
+
 // Criterion 81 (AD-024): Chromium at three widths, light and dark, against the Compose stack plus
 // compose.e2e.yaml (models answered by the local OpenRouter stub). No retries hide a flake.
 const SIZES = [
@@ -18,7 +20,7 @@ export default defineConfig({
   timeout: 90_000,
   expect: { timeout: 15_000 },
   outputDir: './test-results',
-  reporter: [['list'], ['html', { outputFolder: '../evidence/e2e/report', open: 'never' }]],
+  reporter: [['list'], ['html', { outputFolder: evidencePath('e2e', 'report'), open: 'never' }]],
   use: {
     baseURL: process.env.E2E_BASE_URL ?? 'http://localhost:8081',
     trace: 'retain-on-failure',

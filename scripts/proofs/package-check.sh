@@ -4,10 +4,11 @@
 set -euo pipefail
 
 root="$(cd "$(dirname "$0")/../.." && pwd)"
+evidence="${EVIDENCE_DIR:-$root/evidence}"  # AD-038: check_proofs runs write outside the repo
 work="$(mktemp -d)"
 trap 'rm -rf "$work"' EXIT
-mkdir -p "$root/evidence/package"
-log="$root/evidence/package/package-check.txt"
+mkdir -p "$evidence/package"
+log="$evidence/package/package-check.txt"
 
 "$root/scripts/package.sh" "$work/parse-pdf.zip" >/dev/null
 unzip -Z1 "$work/parse-pdf.zip" > "$work/entries.txt"

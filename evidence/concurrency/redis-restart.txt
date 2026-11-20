@@ -1,6 +1,6 @@
 # Criterion 24 Redis restart proof
-date: 2026-11-20T01:55:13Z
-commit: 945baf5
+date: 2026-11-20T04:19:07Z
+commit: 9198fc1
 command: .venv/bin/python scripts/load/redis_restart.py --base http://localhost:8081 --project parse-pdf-e2e
 
 $ docker compose -p parse-pdf-e2e stop worker

@@ -3,9 +3,10 @@ import path from 'node:path'
 
 import { expect, type Locator, type Page, type TestInfo } from '@playwright/test'
 
+import { evidencePath } from './evidence'
 import type { FilePayload } from './files'
 
-const SCREENS = path.resolve(import.meta.dirname, '../../../evidence/e2e/screens')
+const SCREENS = evidencePath('e2e', 'screens')
 export const PROCESSING_TIMEOUT = 60_000
 
 /** Open the page and wait for the session and the first read. */

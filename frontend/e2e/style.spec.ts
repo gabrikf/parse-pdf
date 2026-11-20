@@ -4,9 +4,10 @@ import path from 'node:path'
 import { expect, test } from '@playwright/test'
 
 import { card, openApp, openUpload, pickFiles, shot, uploadAndWait } from './support/app'
+import { evidencePath } from './support/evidence'
 import { sample, SAMPLE } from './support/files'
 
-const NETWORK_LOGS = path.resolve(import.meta.dirname, '../../evidence/upload-page')
+const NETWORK_LOGS = evidencePath('upload-page')
 const PRIMARY = { light: 'rgb(109, 40, 217)', dark: 'rgb(167, 139, 250)' } as const
 
 test('the page calls only its own origin under /api/v1/', async ({ page, baseURL }, info) => {
