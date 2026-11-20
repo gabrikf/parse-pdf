@@ -1,0 +1,136 @@
+{
+  "v": 3,
+  "attachments": {},
+  "boards": {
+    "DesktopDark.dc.html": {
+      "h": 1240,
+      "is_interactive": true,
+      "title": "Desktop 1280 · dark · feed",
+      "w": 1280,
+      "x": 1360,
+      "y": 0
+    },
+    "DesktopUpload.dc.html": {
+      "h": 1240,
+      "is_interactive": true,
+      "title": "Desktop 1280 · light · upload dialog after submit",
+      "w": 1280,
+      "x": 2720,
+      "y": 0
+    },
+    "Main.dc.html": {
+      "expand": "fill",
+      "h": 1240,
+      "is_interactive": true,
+      "title": "Desktop 1280 · light · feed",
+      "w": 1280,
+      "x": 0,
+      "y": 0
+    },
+    "PhoneConfirm.dc.html": {
+      "h": 812,
+      "is_interactive": true,
+      "title": "Phone 375 · light · reparse confirmation",
+      "w": 375,
+      "x": 2213,
+      "y": 1660
+    },
+    "PhoneDark.dc.html": {
+      "h": 812,
+      "is_interactive": true,
+      "title": "Phone 375 · dark · feed",
+      "w": 375,
+      "x": 1303,
+      "y": 1660
+    },
+    "PhoneEmpty.dc.html": {
+      "h": 812,
+      "is_interactive": true,
+      "title": "Phone 375 · light · empty feed",
+      "w": 375,
+      "x": 2668,
+      "y": 1660
+    },
+    "PhoneLight.dc.html": {
+      "h": 812,
+      "is_interactive": true,
+      "title": "Phone 375 · light · feed",
+      "w": 375,
+      "x": 848,
+      "y": 1660
+    },
+    "PhonePages.dc.html": {
+      "h": 812,
+      "is_interactive": true,
+      "title": "Phone 375 · dark · pages sheet",
+      "w": 375,
+      "x": 1758,
+      "y": 1660
+    },
+    "Tablet.dc.html": {
+      "h": 1024,
+      "is_interactive": true,
+      "title": "Tablet 768 · light · rate-limit notice",
+      "w": 768,
+      "x": 0,
+      "y": 1660
+    },
+    "PhoneFailed.dc.html": {
+      "h": 812,
+      "is_interactive": true,
+      "title": "Phone 375 · light · Failed chip",
+      "w": 375,
+      "x": 3123,
+      "y": 1660
+    },
+    "PhoneDelete.dc.html": {
+      "h": 812,
+      "is_interactive": true,
+      "title": "Phone 375 · light · delete forever confirmation",
+      "w": 375,
+      "x": 3578,
+      "y": 1660
+    }
+  },
+  "createdOnFiles": {
+    "at": "2026-11-19T22:40:00Z",
+    "v": 1
+  },
+  "designSystems": [],
+  "launch": {
+    "view": "canvas"
+  },
+  "notes": {
+    "rowDesktop": {
+      "kind": "title1",
+      "maxW": 4000,
+      "text": "Desktop · 1280 px",
+      "w": 240,
+      "x": 0,
+      "y": -300
+    },
+    "rowSmall": {
+      "kind": "title1",
+      "maxW": 3953,
+      "text": "Tablet · 768 px and phone · 375 px",
+      "w": 240,
+      "x": 0,
+      "y": 1360
+    }
+  },
+  "order": [
+    "Main.dc.html",
+    "DesktopDark.dc.html",
+    "DesktopUpload.dc.html",
+    "Tablet.dc.html",
+    "PhoneLight.dc.html",
+    "PhoneDark.dc.html",
+    "PhonePages.dc.html",
+    "PhoneConfirm.dc.html",
+    "PhoneEmpty.dc.html",
+    "PhoneFailed.dc.html",
+    "PhoneDelete.dc.html"
+  ],
+  "pages": [],
+  "title": "Parse PDF upload page"
+}

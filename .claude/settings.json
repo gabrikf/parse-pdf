@@ -1,0 +1,26 @@
+{
+  "$schema": "https://json.schemastore.org/claude-code-settings.json",
+  "permissions": {
+    "allow": [
+      "Bash(scripts/phase.sh)",
+      "Bash(scripts/phase.sh:*)",
+      "Bash(scripts/review-before-push.sh)",
+      "Bash(scripts/review-before-push.sh:*)",
+      "Bash(scripts/coverage-gate.sh)"
+    ]
+  },
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write|MultiEdit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "\"$CLAUDE_PROJECT_DIR\"/scripts/hooks/after-edit.sh",
+            "timeout": 60
+          }
+        ]
+      }
+    ]
+  }
+}

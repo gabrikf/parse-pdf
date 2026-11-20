@@ -1,0 +1,621 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Parse PDF feed</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="anonymous">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;0,6..72,600;1,6..72,400;1,6..72,500&amp;family=Schibsted+Grotesk:wght@400;500;600;700&amp;display=swap">
+<style>
+body{margin:0}
+</style>
+</helmet>
+
+<div style="--bg: {{T.bg}}; --surface: {{T.surface}}; --surface-2: {{T.surface2}}; --line: {{T.line}}; --line-strong: {{T.lineStrong}}; --text: {{T.text}}; --muted: {{T.muted}}; --primary: {{T.primary}}; --on-primary: {{T.onPrimary}}; --primary-soft: {{T.primarySoft}}; --ok: {{T.ok}}; --ok-soft: {{T.okSoft}}; --warn: {{T.warn}}; --warn-soft: {{T.warnSoft}}; --danger: {{T.danger}}; --danger-soft: {{T.dangerSoft}}; --on-danger: {{T.onDanger}}; --scrim: {{T.scrim}}; color-scheme: {{T.scheme}}; position: relative; box-sizing: border-box; width: 100%; height: {{L.height}}; min-height: {{L.minH}}; overflow: hidden; display: flex; flex-direction: {{L.dir}}; background: var(--bg); color: var(--text); font-family: 'Schibsted Grotesk', ui-sans-serif, system-ui, sans-serif; font-size: 15px; line-height: 1.45">
+
+  <sc-if value="{{L.rail}}" hint-placeholder-val="{{true}}">
+    <nav aria-label="Main" style="flex: 0 0 {{L.railW}}; box-sizing: border-box; border-right: 1px solid var(--line); padding: 28px 12px; display: flex; flex-direction: column; gap: 28px">
+      <sc-if value="{{L.railLabels}}" hint-placeholder-val="{{true}}">
+        <div style="padding: 0 12px; font-family: 'Newsreader', Georgia, serif; font-style: italic; font-size: 28px; font-weight: 500; letter-spacing: -0.01em">Parse <span style="color: var(--primary)">PDF</span></div>
+      </sc-if>
+      <sc-if value="{{L.railIconLogo}}" hint-placeholder-val="{{false}}">
+        <div style="display: flex; justify-content: center; color: var(--primary)">
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" role="img" aria-label="Parse PDF"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"></path><path d="M14 2v4a2 2 0 0 0 2 2h4"></path><path d="M10 9H8"></path><path d="M16 13H8"></path><path d="M16 17H8"></path></svg>
+        </div>
+      </sc-if>
+      <div style="display: flex; flex-direction: column; gap: 4px">
+        <button type="button" aria-current="page" aria-label="Feed" style="display: flex; align-items: center; justify-content: {{L.railJustify}}; gap: 16px; min-height: 48px; padding: 0 12px; border: 0; border-radius: 10px; background: var(--surface); color: var(--text); font: inherit; font-weight: 700; cursor: pointer">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 21v-8a1 1 0 0 0-1-1h-4a1 1 0 0 0-1 1v8"></path><path d="M3 10a2 2 0 0 1 .709-1.528l7-5.999a2 2 0 0 1 2.582 0l7 5.999A2 2 0 0 1 21 10v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path></svg>
+          <sc-if value="{{L.railLabels}}" hint-placeholder-val="{{true}}"><span>Feed</span></sc-if>
+        </button>
+        <button type="button" onClick="{{openUpload}}" aria-label="Upload PDFs" style="display: flex; align-items: center; justify-content: {{L.railJustify}}; gap: 16px; min-height: 48px; padding: 0 12px; border: 0; border-radius: 10px; background: transparent; color: var(--text); font: inherit; cursor: pointer">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect width="18" height="18" x="3" y="3" rx="2"></rect><path d="M8 12h8"></path><path d="M12 8v8"></path></svg>
+          <sc-if value="{{L.railLabels}}" hint-placeholder-val="{{true}}"><span>Upload</span></sc-if>
+        </button>
+        <button type="button" onClick="{{toggleTheme}}" aria-label="{{themeLabel}}" style="display: flex; align-items: center; justify-content: {{L.railJustify}}; gap: 16px; min-height: 48px; padding: 0 12px; border: 0; border-radius: 10px; background: transparent; color: var(--text); font: inherit; cursor: pointer">
+          <sc-if value="{{dark}}" hint-placeholder-val="{{false}}">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="4"></circle><path d="M12 2v2"></path><path d="M12 20v2"></path><path d="m4.93 4.93 1.41 1.41"></path><path d="m17.66 17.66 1.41 1.41"></path><path d="M2 12h2"></path><path d="M20 12h2"></path><path d="m6.34 17.66-1.41 1.41"></path><path d="m19.07 4.93-1.41 1.41"></path></svg>
+          </sc-if>
+          <sc-if value="{{light}}" hint-placeholder-val="{{true}}">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"></path></svg>
+          </sc-if>
+          <sc-if value="{{L.railLabels}}" hint-placeholder-val="{{true}}"><span>{{themeLabel}}</span></sc-if>
+        </button>
+      </div>
+    </nav>
+  </sc-if>
+
+  <sc-if value="{{L.topbar}}" hint-placeholder-val="{{false}}">
+    <header style="flex: 0 0 56px; box-sizing: border-box; display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 0 16px; border-bottom: 1px solid var(--line)">
+      <div style="font-family: 'Newsreader', Georgia, serif; font-style: italic; font-size: 24px; font-weight: 500; letter-spacing: -0.01em">Parse <span style="color: var(--primary)">PDF</span></div>
+      <div style="font-size: 12px; color: var(--muted); font-variant-numeric: tabular-nums; text-align: right">1,240 of 3,000<br>model pages today</div>
+    </header>
+  </sc-if>
+
+  <main style="flex: 1 1 auto; min-width: 0; min-height: 0; overflow-y: {{L.scroll}}; box-sizing: border-box; padding: {{L.mainPad}}; display: flex; justify-content: center; align-items: flex-start; gap: 56px">
+    <div style="flex: 0 1 600px; min-width: 0; display: flex; flex-direction: column">
+
+      <sc-if value="{{showRate}}" hint-placeholder-val="{{false}}">
+        <div role="status" style="display: flex; align-items: flex-start; gap: 10px; margin: {{L.noticeMargin}}; padding: 12px 14px; border-radius: 10px; background: var(--warn-soft); color: var(--warn); font-size: 14px; font-weight: 500">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="flex: 0 0 auto"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"></path><path d="M12 9v4"></path><path d="M12 17h.01"></path></svg>
+          <span>Too many uploads in the last minute. You can upload again in 42 s.</span>
+        </div>
+      </sc-if>
+      <sc-if value="{{showOffline}}" hint-placeholder-val="{{false}}">
+        <div role="alert" style="display: flex; align-items: center; gap: 10px; margin: {{L.noticeMargin}}; padding: 10px 10px 10px 14px; border-radius: 10px; background: var(--danger-soft); color: var(--danger); font-size: 14px; font-weight: 500">
+          <span style="flex: 1 1 auto">Can't reach the server. Your files are safe; the feed will refresh when it's back.</span>
+          <button type="button" style="min-height: 44px; padding: 0 14px; border: 1px solid currentColor; border-radius: 8px; background: transparent; color: inherit; font: inherit; font-weight: 600; cursor: pointer">Retry</button>
+        </div>
+      </sc-if>
+
+      <sc-if value="{{showStories}}" hint-placeholder-val="{{true}}">
+        <section aria-label="In progress" style="display: flex; gap: 16px; overflow-x: auto; padding: {{L.storiesPad}}; border-bottom: 1px solid var(--line)">
+          <button type="button" onClick="{{openUpload}}" style="flex: 0 0 72px; display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 0; border: 0; background: transparent; color: var(--text); font: inherit; cursor: pointer">
+            <span style="box-sizing: border-box; width: 66px; height: 66px; border-radius: 50%; border: 1.5px dashed var(--line-strong); display: flex; align-items: center; justify-content: center; color: var(--primary)">
+              <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14"></path><path d="M12 5v14"></path></svg>
+            </span>
+            <span style="font-size: 12px; font-weight: 600">Upload</span>
+          </button>
+          <sc-for list="{{busy}}" as="st" hint-placeholder-count="2">
+            <a href="#doc-{{st.id}}" style="flex: 0 0 72px; display: flex; flex-direction: column; align-items: center; gap: 6px; color: var(--text); text-decoration: none">
+              <span style="box-sizing: border-box; width: 66px; height: 66px; border-radius: 50%; border: {{st.ring}}; padding: 3px; display: flex">
+                <span style="flex: 1; border-radius: 50%; background: var(--surface-2); display: flex; align-items: center; justify-content: center; color: var(--muted)">
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"></path><path d="M14 2v4a2 2 0 0 0 2 2h4"></path><path d="M16 13H8"></path><path d="M16 17H8"></path></svg>
+                </span>
+              </span>
+              <span style="width: 72px; font-size: 12px; text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">{{st.short}}</span>
+              <span style="margin-top: -6px; font-size: 11px; font-weight: 600; color: {{st.statusColor}}">{{st.label}}</span>
+            </a>
+          </sc-for>
+        </section>
+      </sc-if>
+
+      <sc-if value="{{showChips}}" hint-placeholder-val="{{true}}">
+        <div role="group" aria-label="Show in feed" style="display: flex; flex-wrap: wrap; gap: 8px; padding: {{L.chipsPad}}">
+          <sc-for list="{{chips}}" as="c" hint-placeholder-count="3">
+            <button type="button" aria-pressed="{{c.pressed}}" onClick="{{c.pick}}" style="display: flex; align-items: center; gap: 8px; min-height: 44px; padding: 0 18px; border-radius: 999px; border: 1px solid {{c.border}}; background: {{c.bg}}; color: {{c.fg}}; font: inherit; font-size: 14px; font-weight: 600; cursor: pointer">{{c.label}} <span style="font-weight: 500; font-variant-numeric: tabular-nums; opacity: 0.8">{{c.count}}</span></button>
+          </sc-for>
+        </div>
+      </sc-if>
+
+      <sc-if value="{{isEmpty}}" hint-placeholder-val="{{false}}">
+        <section style="display: flex; flex-direction: column; align-items: center; text-align: center; gap: 14px; padding: 96px 24px">
+          <span style="width: 88px; height: 88px; border-radius: 50%; border: 1.5px solid var(--line-strong); display: flex; align-items: center; justify-content: center; color: var(--primary)">
+            <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 13v8"></path><path d="M4 14.899A7 7 0 1 1 15.71 8h1.79a4.5 4.5 0 0 1 2.5 8.242"></path><path d="m8 17 4-4 4 4"></path></svg>
+          </span>
+          <h1 style="margin: 0; font-family: 'Newsreader', Georgia, serif; font-size: 30px; font-weight: 500; line-height: 1.15; text-wrap: balance">No documents yet</h1>
+          <p style="margin: 0; max-width: 34ch; color: var(--muted)">Upload a PDF to read it page by page, with a short summary at the top.</p>
+          <button type="button" onClick="{{openUpload}}" style="min-height: 44px; padding: 0 22px; border: 0; border-radius: 8px; background: var(--primary); color: var(--on-primary); font: inherit; font-weight: 600; cursor: pointer">Upload PDFs</button>
+          <p style="margin: 8px 0 0; max-width: 36ch; font-size: 13px; color: var(--muted)">Files stay private to this browser and are deleted after 7 days.</p>
+        </section>
+      </sc-if>
+
+      <sc-for list="{{docs}}" as="d" hint-placeholder-count="3">
+        <article id="doc-{{d.id}}" aria-label="{{d.name}}" style="display: flex; flex-direction: column; gap: 12px; padding: {{L.cardPad}}; border-bottom: 1px solid var(--line)">
+
+          <header style="display: flex; align-items: center; gap: 12px">
+            <span style="flex: 0 0 40px; height: 40px; border-radius: 50%; border: 1px solid var(--line); background: var(--surface); display: flex; align-items: center; justify-content: center; color: var(--muted)">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"></path><path d="M14 2v4a2 2 0 0 0 2 2h4"></path><path d="M10 9H8"></path><path d="M16 13H8"></path><path d="M16 17H8"></path></svg>
+            </span>
+            <div style="flex: 1 1 auto; min-width: 0">
+              <div style="font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">{{d.name}}</div>
+              <div style="font-size: 13px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis">{{d.meta}}</div>
+            </div>
+            <span style="flex: 0 0 auto; padding: 3px 10px; border-radius: 999px; background: {{d.pillBg}}; color: {{d.pillFg}}; font-size: 12px; font-weight: 600">{{d.label}}</span>
+            <button type="button" aria-label="More actions for {{d.name}}" style="flex: 0 0 44px; height: 44px; margin-right: -10px; border: 0; border-radius: 50%; background: transparent; color: var(--text); cursor: pointer; display: flex; align-items: center; justify-content: center">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="1"></circle><circle cx="19" cy="12" r="1"></circle><circle cx="5" cy="12" r="1"></circle></svg>
+            </button>
+          </header>
+
+          <sc-if value="{{d.isReady}}" hint-placeholder-val="{{true}}">
+            <div style="display: flex; flex-direction: column; gap: 10px; padding: 20px 22px; border-radius: 12px; background: var(--surface); border: 1px solid var(--line)">
+              <div style="font-size: 12px; font-weight: 600; color: var(--muted)">Summary · Gemini 3.1 Flash Lite</div>
+              <p style="margin: 0; font-family: 'Newsreader', Georgia, serif; font-size: 18px; line-height: 1.5; color: var(--text)">{{d.overview}}</p>
+              <ul style="margin: 0; padding-left: 20px; display: flex; flex-direction: column; gap: 6px; font-family: 'Newsreader', Georgia, serif; font-size: 16px; line-height: 1.45">
+                <sc-for list="{{d.bullets}}" as="b" hint-placeholder-count="3">
+                  <li>{{b}}</li>
+                </sc-for>
+              </ul>
+            </div>
+            <div style="display: flex; align-items: center; gap: 2px; margin: 0 -10px">
+              <button type="button" onClick="{{d.openPages}}" aria-label="Read the pages of {{d.name}}" style="width: 44px; height: 44px; border: 0; border-radius: 50%; background: transparent; color: var(--text); cursor: pointer; display: flex; align-items: center; justify-content: center">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 7v14"></path><path d="M3 18a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h5a4 4 0 0 1 4 4 4 4 0 0 1 4-4h5a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1h-6a3 3 0 0 0-3 3 3 3 0 0 0-3-3z"></path></svg>
+              </button>
+              <button type="button" onClick="{{d.askReparse}}" aria-label="Reparse {{d.name}}" style="width: 44px; height: 44px; border: 0; border-radius: 50%; background: transparent; color: var(--text); cursor: pointer; display: flex; align-items: center; justify-content: center">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"></path><path d="M21 3v5h-5"></path><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"></path><path d="M8 16H3v5"></path></svg>
+              </button>
+              <button type="button" onClick="{{d.copy}}" aria-label="Copy summary of {{d.name}}" style="width: 44px; height: 44px; border: 0; border-radius: 50%; background: transparent; color: var(--text); cursor: pointer; display: flex; align-items: center; justify-content: center">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"></rect><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"></path></svg>
+              </button>
+              <span role="status" style="font-size: 13px; font-weight: 600; color: var(--ok)">{{d.copyText}}</span>
+              <span style="flex: 1 1 auto"></span>
+              <button type="button" onClick="{{d.askDelete}}" aria-label="Delete {{d.name}}" style="width: 44px; height: 44px; border: 0; border-radius: 50%; background: transparent; color: var(--text); cursor: pointer; display: flex; align-items: center; justify-content: center">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6h18"></path><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"></path><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path><line x1="10" x2="10" y1="11" y2="17"></line><line x1="14" x2="14" y1="11" y2="17"></line></svg>
+              </button>
+            </div>
+            <div style="display: flex; flex-direction: column; gap: 4px">
+              <p style="margin: 0; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden"><strong style="font-weight: 600">Page 1</strong> <span style="font-family: 'Newsreader', Georgia, serif; font-size: 16px">{{d.firstPage}}</span></p>
+              <button type="button" onClick="{{d.openPages}}" style="align-self: flex-start; min-height: 32px; padding: 0; border: 0; background: transparent; color: var(--muted); font: inherit; font-size: 14px; cursor: pointer">View all {{d.pages}} pages</button>
+            </div>
+          </sc-if>
+
+          <sc-if value="{{d.isBusy}}" hint-placeholder-val="{{false}}">
+            <div style="display: flex; flex-direction: column; gap: 10px; padding: 20px 22px; border-radius: 12px; background: var(--surface); border: 1px dashed var(--line-strong)">
+              <div style="height: 12px; width: 78%; border-radius: 6px; background: var(--surface-2)"></div>
+              <div style="height: 12px; width: 92%; border-radius: 6px; background: var(--surface-2)"></div>
+              <div style="height: 12px; width: 64%; border-radius: 6px; background: var(--surface-2)"></div>
+              <p style="margin: 6px 0 0; font-size: 14px; color: var(--muted)">{{d.busyText}}</p>
+            </div>
+          </sc-if>
+
+          <sc-if value="{{d.isNoText}}" hint-placeholder-val="{{false}}">
+            <div style="display: flex; flex-direction: column; gap: 12px; padding: 18px 20px; border-radius: 12px; background: var(--surface); border: 1px solid var(--line)">
+              <p style="margin: 0"><strong style="font-weight: 600">No text found on any page.</strong> This usually means a scanned PDF or a photo of a page. Gemini 3.1 Flash Lite reads scanned pages.</p>
+              <div style="display: flex; flex-wrap: wrap; gap: 8px">
+                <button type="button" onClick="{{d.askReparse}}" style="min-height: 44px; padding: 0 18px; border: 0; border-radius: 8px; background: var(--primary); color: var(--on-primary); font: inherit; font-weight: 600; cursor: pointer">Reparse with Gemini</button>
+                <button type="button" onClick="{{d.askDelete}}" style="min-height: 44px; padding: 0 18px; border: 1px solid var(--line-strong); border-radius: 8px; background: transparent; color: var(--text); font: inherit; font-weight: 600; cursor: pointer">Delete</button>
+              </div>
+            </div>
+          </sc-if>
+
+          <sc-if value="{{d.isDead}}" hint-placeholder-val="{{false}}">
+            <div style="display: flex; flex-direction: column; gap: 12px; padding: 18px 20px; border-radius: 12px; background: var(--danger-soft); color: var(--danger)">
+              <p style="margin: 0; font-weight: 500">Processing stopped after 6 tries. The model provider kept timing out.</p>
+              <div style="display: flex; flex-wrap: wrap; gap: 8px">
+                <button type="button" onClick="{{d.askRequeue}}" style="min-height: 44px; padding: 0 18px; border: 0; border-radius: 8px; background: var(--primary); color: var(--on-primary); font: inherit; font-weight: 600; cursor: pointer">Retry</button>
+                <button type="button" onClick="{{d.askReparse}}" style="min-height: 44px; padding: 0 18px; border: 1px solid var(--line-strong); border-radius: 8px; background: var(--bg); color: var(--text); font: inherit; font-weight: 600; cursor: pointer">Reparse with another parser</button>
+                <button type="button" onClick="{{d.askDelete}}" style="min-height: 44px; padding: 0 18px; border: 1px solid var(--line-strong); border-radius: 8px; background: var(--bg); color: var(--danger); font: inherit; font-weight: 600; cursor: pointer">Delete forever</button>
+              </div>
+            </div>
+          </sc-if>
+
+          <sc-if value="{{d.isTooLarge}}" hint-placeholder-val="{{false}}">
+            <div style="display: flex; align-items: center; flex-wrap: wrap; gap: 12px; padding: 16px 20px; border-radius: 12px; background: var(--surface); border: 1px solid var(--line)">
+              <p style="flex: 1 1 260px; margin: 0">61.4 MB is over the 50 MB limit, so it can't be retried. Split or compress the PDF, then upload it again.</p>
+              <button type="button" onClick="{{d.askDelete}}" style="min-height: 44px; padding: 0 18px; border: 1px solid var(--line-strong); border-radius: 8px; background: transparent; color: var(--danger); font: inherit; font-weight: 600; cursor: pointer">Delete forever</button>
+            </div>
+          </sc-if>
+
+        </article>
+      </sc-for>
+    </div>
+
+    <sc-if value="{{L.rightRail}}" hint-placeholder-val="{{true}}">
+      <aside aria-label="About parsing" style="flex: 0 0 300px; display: flex; flex-direction: column; gap: 28px; padding-top: 8px">
+        <section style="display: flex; flex-direction: column; gap: 14px">
+          <h2 style="margin: 0; font-size: 14px; font-weight: 600; color: var(--muted)">Parsers</h2>
+          <div style="display: flex; flex-direction: column; gap: 2px">
+            <div style="font-weight: 600">PyPDF</div>
+            <div style="font-size: 14px; color: var(--muted)">Plain text from PDFs that already have a text layer. Fast, no model.</div>
+          </div>
+          <div style="display: flex; flex-direction: column; gap: 2px">
+            <div style="font-weight: 600">Gemini 3.1 Flash Lite</div>
+            <div style="font-size: 14px; color: var(--muted)">Markdown with headings, lists and tables. Reads scanned pages.</div>
+          </div>
+          <div style="display: flex; flex-direction: column; gap: 2px">
+            <div style="font-weight: 600">GPT-5 Mini</div>
+            <div style="font-size: 14px; color: var(--muted)">OCR for scans and photographed pages, returned as markdown.</div>
+          </div>
+          <div style="font-size: 13px; color: var(--muted)">Every summary is written by Gemini 3.1 Flash Lite.</div>
+        </section>
+        <section style="display: flex; flex-direction: column; gap: 10px; padding-top: 24px; border-top: 1px solid var(--line)">
+          <h2 style="margin: 0; font-size: 14px; font-weight: 600; color: var(--muted)">Model pages today</h2>
+          <div style="font-variant-numeric: tabular-nums"><span style="font-family: 'Newsreader', Georgia, serif; font-size: 32px; font-weight: 500">1,240</span> <span style="color: var(--muted)">of 3,000</span></div>
+          <div role="img" aria-label="41 percent of today's model pages used" style="height: 6px; border-radius: 3px; background: var(--surface-2); overflow: hidden">
+            <div style="width: 41%; height: 100%; background: var(--primary)"></div>
+          </div>
+          <div style="font-size: 13px; color: var(--muted)">Resets at 00:00 UTC. PyPDF parsing doesn't count.</div>
+        </section>
+        <p style="margin: 0; padding-top: 24px; border-top: 1px solid var(--line); font-size: 13px; color: var(--muted)">Files stay private to this browser and are deleted after 7 days.</p>
+      </aside>
+    </sc-if>
+  </main>
+
+  <sc-if value="{{L.tabbar}}" hint-placeholder-val="{{false}}">
+    <nav aria-label="Main" style="flex: 0 0 56px; display: flex; align-items: stretch; justify-content: space-around; border-top: 1px solid var(--line); background: var(--bg)">
+      <button type="button" aria-current="page" aria-label="Feed" style="flex: 1; border: 0; background: transparent; color: var(--text); cursor: pointer; display: flex; align-items: center; justify-content: center">
+        <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 21v-8a1 1 0 0 0-1-1h-4a1 1 0 0 0-1 1v8"></path><path d="M3 10a2 2 0 0 1 .709-1.528l7-5.999a2 2 0 0 1 2.582 0l7 5.999A2 2 0 0 1 21 10v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path></svg>
+      </button>
+      <button type="button" onClick="{{openUpload}}" aria-label="Upload PDFs" style="flex: 1; border: 0; background: transparent; color: var(--text); cursor: pointer; display: flex; align-items: center; justify-content: center">
+        <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect width="18" height="18" x="3" y="3" rx="2"></rect><path d="M8 12h8"></path><path d="M12 8v8"></path></svg>
+      </button>
+      <button type="button" onClick="{{toggleTheme}}" aria-label="{{themeLabel}}" style="flex: 1; border: 0; background: transparent; color: var(--text); cursor: pointer; display: flex; align-items: center; justify-content: center">
+        <sc-if value="{{dark}}" hint-placeholder-val="{{false}}">
+          <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="4"></circle><path d="M12 2v2"></path><path d="M12 20v2"></path><path d="m4.93 4.93 1.41 1.41"></path><path d="m17.66 17.66 1.41 1.41"></path><path d="M2 12h2"></path><path d="M20 12h2"></path><path d="m6.34 17.66-1.41 1.41"></path><path d="m19.07 4.93-1.41 1.41"></path></svg>
+        </sc-if>
+        <sc-if value="{{light}}" hint-placeholder-val="{{true}}">
+          <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"></path></svg>
+        </sc-if>
+      </button>
+    </nav>
+  </sc-if>
+
+  <sc-if value="{{showOverlay}}" hint-placeholder-val="{{false}}">
+    <div style="position: absolute; inset: 0; z-index: 10; box-sizing: border-box; display: flex; align-items: {{L.overlayAlign}}; justify-content: center; padding: {{L.overlayPad}}; background: var(--scrim)">
+
+      <sc-if value="{{isUpload}}" hint-placeholder-val="{{false}}">
+        <section role="dialog" aria-modal="true" aria-labelledby="upload-title" style="box-sizing: border-box; width: 100%; max-width: {{L.dialogW}}; max-height: {{L.dialogMaxH}}; overflow-y: auto; display: flex; flex-direction: column; background: var(--bg); border: 1px solid var(--line); border-radius: {{L.dialogRadius}}">
+          <header style="display: flex; align-items: center; gap: 8px; padding: 10px 10px 10px 20px; border-bottom: 1px solid var(--line)">
+            <h2 id="upload-title" style="flex: 1; margin: 0; font-size: 16px; font-weight: 700">Upload PDFs</h2>
+            <button type="button" onClick="{{closeOverlay}}" aria-label="Close" style="width: 44px; height: 44px; border: 0; border-radius: 50%; background: transparent; color: var(--text); cursor: pointer; display: flex; align-items: center; justify-content: center">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 6 6 18"></path><path d="m6 6 12 12"></path></svg>
+            </button>
+          </header>
+          <div style="display: flex; flex-direction: column; gap: 18px; padding: 20px">
+            <div style="display: flex; flex-direction: column; align-items: center; text-align: center; gap: 8px; padding: 26px 16px; border: 1.5px dashed var(--line-strong); border-radius: 12px; background: var(--surface)">
+              <span style="color: var(--primary)">
+                <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 13v8"></path><path d="M4 14.899A7 7 0 1 1 15.71 8h1.79a4.5 4.5 0 0 1 2.5 8.242"></path><path d="m8 17 4-4 4 4"></path></svg>
+              </span>
+              <div style="font-weight: 600">Drop PDFs here, or paste them</div>
+              <div style="font-size: 13px; color: var(--muted)">Up to 20 files, 50 MB each</div>
+              <button type="button" style="margin-top: 6px; min-height: 44px; padding: 0 18px; border: 1px solid var(--line-strong); border-radius: 8px; background: var(--bg); color: var(--text); font: inherit; font-weight: 600; cursor: pointer">Choose files</button>
+            </div>
+
+            <div style="display: flex; flex-direction: column; gap: 6px">
+              <label for="upload-parser" style="font-size: 14px; font-weight: 600">Parser</label>
+              <select id="upload-parser" style="min-height: 44px; padding: 0 12px; border: 1px solid var(--line-strong); border-radius: 8px; background: var(--bg); color: var(--text); font: inherit">
+                <option value="pypdf">PyPDF · plain text</option>
+                <option value="gemini-3.1-flash-lite" selected="">Gemini 3.1 Flash Lite · markdown</option>
+                <option value="gpt-5-mini">GPT-5 Mini · OCR</option>
+              </select>
+            </div>
+
+            <div style="display: flex; flex-direction: column">
+              <div style="font-size: 14px; font-weight: 600; padding-bottom: 6px">2 of 4 files uploaded</div>
+              <div style="display: flex; align-items: center; gap: 12px; padding: 10px 0; border-top: 1px solid var(--line)">
+                <span style="color: var(--ok)"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" role="img" aria-label="Uploaded"><path d="M20 6 9 17l-5-5"></path></svg></span>
+                <span style="flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">constitution-of-the-united-states.pdf</span>
+                <span style="font-size: 13px; color: var(--muted); font-variant-numeric: tabular-nums">2.3 MB</span>
+              </div>
+              <div style="display: flex; align-items: center; gap: 12px; padding: 10px 0; border-top: 1px solid var(--line)">
+                <span style="color: var(--ok)"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" role="img" aria-label="Uploaded"><path d="M20 6 9 17l-5-5"></path></svg></span>
+                <span style="flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">federalist-papers-no-10.pdf</span>
+                <span style="font-size: 13px; color: var(--muted); font-variant-numeric: tabular-nums">0.6 MB</span>
+              </div>
+              <div style="display: flex; flex-direction: column; gap: 4px; padding: 10px 0; border-top: 1px solid var(--line)">
+                <div style="display: flex; align-items: center; gap: 12px">
+                  <span style="color: var(--danger)"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" role="img" aria-label="Not uploaded"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"></path><path d="M12 9v4"></path><path d="M12 17h.01"></path></svg></span>
+                  <span style="flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">whiteboard-photo.pdf</span>
+                  <span style="font-size: 13px; color: var(--muted); font-variant-numeric: tabular-nums">1.2 MB</span>
+                </div>
+                <div style="padding-left: 32px; font-size: 13px; color: var(--danger)">This file isn't a PDF. Export it as a PDF and add it again.</div>
+              </div>
+              <div style="display: flex; flex-direction: column; gap: 8px; padding: 10px 0; border-top: 1px solid var(--line)">
+                <div style="display: flex; align-items: center; gap: 12px">
+                  <span style="color: var(--warn)"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" role="img" aria-label="Locked"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg></span>
+                  <span style="flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">bank-statement-october.pdf</span>
+                  <span style="font-size: 13px; color: var(--muted); font-variant-numeric: tabular-nums">0.4 MB</span>
+                </div>
+                <div style="padding-left: 32px; display: flex; flex-direction: column; gap: 6px">
+                  <label for="pw-bank-statement" style="font-size: 13px; color: var(--warn); font-weight: 500">This PDF needs a password. It is used once to unlock the file and never stored.</label>
+                  <div style="display: flex; gap: 8px">
+                    <input id="pw-bank-statement" type="password" autocomplete="off" placeholder="Password" style="flex: 1 1 auto; min-width: 0; min-height: 44px; box-sizing: border-box; padding: 0 12px; border: 1px solid var(--line-strong); border-radius: 8px; background: var(--bg); color: var(--text); font: inherit">
+                    <button type="button" style="flex: 0 0 auto; min-height: 44px; padding: 0 16px; border: 0; border-radius: 8px; background: var(--primary); color: var(--on-primary); font: inherit; font-weight: 600; cursor: pointer">Unlock</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <footer style="display: flex; justify-content: flex-end; flex-wrap: wrap; gap: 8px; padding: 14px 20px; border-top: 1px solid var(--line)">
+            <button type="button" style="min-height: 44px; padding: 0 18px; border: 1px solid var(--line-strong); border-radius: 8px; background: transparent; color: var(--text); font: inherit; font-weight: 600; cursor: pointer">Add more files</button>
+            <button type="button" onClick="{{closeOverlay}}" style="min-height: 44px; padding: 0 22px; border: 0; border-radius: 8px; background: var(--primary); color: var(--on-primary); font: inherit; font-weight: 600; cursor: pointer">Done</button>
+          </footer>
+        </section>
+      </sc-if>
+
+      <sc-if value="{{isPages}}" hint-placeholder-val="{{false}}">
+        <section role="dialog" aria-modal="true" aria-labelledby="pages-title" style="box-sizing: border-box; width: 100%; max-width: {{L.sheetW}}; max-height: {{L.dialogMaxH}}; display: flex; flex-direction: column; background: var(--bg); border: 1px solid var(--line); border-radius: {{L.dialogRadius}}; overflow: hidden">
+          <header style="display: flex; align-items: center; gap: 8px; padding: 10px 10px 10px 20px; border-bottom: 1px solid var(--line)">
+            <div style="flex: 1; min-width: 0">
+              <h2 id="pages-title" style="margin: 0; font-size: 16px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">constitution-of-the-united-states.pdf</h2>
+              <div style="font-size: 13px; color: var(--muted)">18 pages · markdown · Gemini 3.1 Flash Lite</div>
+            </div>
+            <button type="button" onClick="{{closeOverlay}}" aria-label="Close pages" style="width: 44px; height: 44px; border: 0; border-radius: 50%; background: transparent; color: var(--text); cursor: pointer; display: flex; align-items: center; justify-content: center">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 6 6 18"></path><path d="m6 6 12 12"></path></svg>
+            </button>
+          </header>
+          <div style="flex: 1 1 auto; overflow-y: auto; padding: 4px 20px 20px; font-family: 'Newsreader', Georgia, serif">
+            <sc-for list="{{pageList}}" as="pg" hint-placeholder-count="3">
+              <article aria-label="Page {{pg.n}}" style="display: flex; flex-direction: column; gap: 10px; padding: 18px 0; border-bottom: 1px solid var(--line)">
+                <div style="font-family: 'Schibsted Grotesk', ui-sans-serif, system-ui, sans-serif; font-size: 12px; font-weight: 600; color: var(--muted)">Page {{pg.n}}</div>
+                <sc-for list="{{pg.blocks}}" as="bl" hint-placeholder-count="2">
+                  <div>
+                    <sc-if value="{{bl.isH}}" hint-placeholder-val="{{false}}"><h3 style="margin: 0; font-size: 22px; font-weight: 600; line-height: 1.2">{{bl.text}}</h3></sc-if>
+                    <sc-if value="{{bl.isSub}}" hint-placeholder-val="{{false}}"><h4 style="margin: 0; font-size: 17px; font-weight: 600; font-style: italic">{{bl.text}}</h4></sc-if>
+                    <sc-if value="{{bl.isP}}" hint-placeholder-val="{{true}}"><p style="margin: 0; font-size: 17px; line-height: 1.55">{{bl.text}}</p></sc-if>
+                  </div>
+                </sc-for>
+              </article>
+            </sc-for>
+            <div style="padding-top: 16px; font-family: 'Schibsted Grotesk', ui-sans-serif, system-ui, sans-serif; font-size: 13px; color: var(--muted); text-align: center">Showing 3 of 18 pages · scroll for more</div>
+          </div>
+        </section>
+      </sc-if>
+
+      <sc-if value="{{isConfirm}}" hint-placeholder-val="{{false}}">
+        <section role="alertdialog" aria-modal="true" aria-labelledby="confirm-title" aria-describedby="confirm-body" style="box-sizing: border-box; width: 100%; max-width: 440px; display: flex; flex-direction: column; gap: 16px; padding: 22px; background: var(--bg); border: 1px solid var(--line); border-radius: {{L.confirmRadius}}">
+          <h2 id="confirm-title" style="margin: 0; font-size: 18px; font-weight: 700; line-height: 1.3; overflow-wrap: anywhere">{{confirm.title}}</h2>
+          <p id="confirm-body" style="margin: 0; color: var(--muted)">{{confirm.body}}</p>
+          <sc-if value="{{confirm.isReparse}}" hint-placeholder-val="{{true}}">
+          <fieldset style="margin: 0; padding: 0; border: 0; display: flex; flex-direction: column; gap: 8px">
+            <legend style="padding: 0 0 8px; font-size: 14px; font-weight: 600">Parser</legend>
+            <label for="rp-pypdf" style="display: flex; align-items: center; gap: 12px; min-height: 48px; padding: 0 14px; border: 1px solid var(--line); border-radius: 10px; cursor: pointer">
+              <input id="rp-pypdf" type="radio" name="reparse-parser" value="pypdf" style="width: 18px; height: 18px; margin: 0; accent-color: var(--primary)">
+              <span style="flex: 1">PyPDF <span style="color: var(--muted)">· plain text</span></span>
+            </label>
+            <label for="rp-gemini" style="display: flex; align-items: center; gap: 12px; min-height: 48px; padding: 0 14px; border: 1px solid var(--line); border-radius: 10px; cursor: pointer">
+              <input id="rp-gemini" type="radio" name="reparse-parser" value="gemini-3.1-flash-lite" style="width: 18px; height: 18px; margin: 0; accent-color: var(--primary)">
+              <span style="flex: 1">Gemini 3.1 Flash Lite <span style="color: var(--muted)">· markdown</span></span>
+            </label>
+            <label for="rp-gpt" style="display: flex; align-items: center; gap: 12px; min-height: 48px; padding: 0 14px; border: 1.5px solid var(--primary); border-radius: 10px; background: var(--primary-soft); cursor: pointer">
+              <input id="rp-gpt" type="radio" name="reparse-parser" value="gpt-5-mini" checked="" style="width: 18px; height: 18px; margin: 0; accent-color: var(--primary)">
+              <span style="flex: 1">GPT-5 Mini <span style="color: var(--muted)">· OCR</span></span>
+            </label>
+          </fieldset>
+          </sc-if>
+          <div style="display: flex; justify-content: flex-end; flex-wrap: wrap; gap: 8px">
+            <button type="button" onClick="{{closeOverlay}}" style="min-height: 44px; padding: 0 18px; border: 1px solid var(--line-strong); border-radius: 8px; background: transparent; color: var(--text); font: inherit; font-weight: 600; cursor: pointer">Cancel</button>
+            <button type="button" onClick="{{closeOverlay}}" style="min-height: 44px; padding: 0 22px; border: 0; border-radius: 8px; background: {{confirm.actionBg}}; color: {{confirm.actionFg}}; font: inherit; font-weight: 600; cursor: pointer">{{confirm.action}}</button>
+          </div>
+        </section>
+      </sc-if>
+
+    </div>
+  </sc-if>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"dark":{"editor":"boolean","default":false},"layout":{"editor":"enum","options":["desktop","tablet","phone"],"default":"desktop"},"scene":{"editor":"enum","options":["feed","upload","pages","confirm","retry","delete","empty"],"default":"feed"},"filter":{"editor":"enum","options":["parsed","failed","all"],"default":"parsed"},"notice":{"editor":"enum","options":["none","rate","offline"],"default":"none"},"$preview":{"width":1280,"height":1240}}'>
+class Component extends DCLogic {
+  theme(dark) {
+    if (dark) {
+      return {
+        scheme: 'dark', bg: '#0E0D12', surface: '#17151D', surface2: '#221F2A', line: '#2A2733', lineStrong: '#3D3948',
+        text: '#EDEBF2', muted: '#A19DAD', primary: '#A78BFA', onPrimary: '#0E0D12', primarySoft: '#241B3A',
+        ok: '#4ADE80', okSoft: '#12261A', warn: '#FBBF24', warnSoft: '#2A2110', danger: '#F87171', dangerSoft: '#2C1515', onDanger: '#0E0D12',
+        scrim: 'rgba(0, 0, 0, 0.62)'
+      };
+    }
+    return {
+      scheme: 'light', bg: '#FFFFFF', surface: '#F7F6FA', surface2: '#ECEAF1', line: '#E6E3EC', lineStrong: '#CBC6D5',
+      text: '#16141B', muted: '#6B6676', primary: '#6D28D9', onPrimary: '#FFFFFF', primarySoft: '#F3EEFD',
+      ok: '#15803D', okSoft: '#EAF6EE', warn: '#B45309', warnSoft: '#FDF3E7', danger: '#B91C1C', dangerSoft: '#FCEDED', onDanger: '#FFFFFF',
+      scrim: 'rgba(22, 20, 27, 0.48)'
+    };
+  }
+
+  layout(name) {
+    if (name === 'phone') {
+      return {
+        dir: 'column', height: '812px', minH: '0px', rail: false, railLabels: false, railIconLogo: false, railW: '0px',
+        railJustify: 'center', topbar: true, tabbar: true, rightRail: false, scroll: 'auto', mainPad: '0px',
+        cardPad: '16px', storiesPad: '14px 16px', noticeMargin: '12px 16px 0', overlayAlign: 'flex-end',
+        overlayPad: '0px', dialogW: '100%', sheetW: '100%', dialogMaxH: '760px', dialogRadius: '16px 16px 0 0',
+        confirmRadius: '16px 16px 0 0'
+      };
+    }
+    if (name === 'tablet') {
+      return {
+        dir: 'row', height: '1024px', minH: '0px', rail: true, railLabels: false, railIconLogo: true, railW: '72px',
+        railJustify: 'center', topbar: false, tabbar: false, rightRail: false, scroll: 'auto', mainPad: '24px 32px 48px',
+        cardPad: '20px 0', storiesPad: '4px 0 18px', noticeMargin: '0 0 16px', overlayAlign: 'center',
+        overlayPad: '24px', dialogW: '560px', sheetW: '640px', dialogMaxH: '900px', dialogRadius: '16px',
+        confirmRadius: '16px'
+      };
+    }
+    return {
+      dir: 'row', height: 'auto', minH: '1240px', rail: true, railLabels: true, railIconLogo: false, railW: '244px',
+      railJustify: 'flex-start', topbar: false, tabbar: false, rightRail: true, scroll: 'visible', mainPad: '32px 32px 64px',
+      cardPad: '22px 0', storiesPad: '4px 0 20px', noticeMargin: '0 0 16px', overlayAlign: 'flex-start',
+      overlayPad: '96px 24px', dialogW: '560px', sheetW: '680px', dialogMaxH: '1000px', dialogRadius: '16px',
+      confirmRadius: '16px'
+    };
+  }
+
+  documents() {
+    return [
+      { id: 'lecture', name: 'lecture-notes-week-3.pdf', short: 'lecture-notes', meta: 'PyPDF · 12 pages · just now', status: 'queued' },
+      { id: 'annual', name: 'annual-report-2025.pdf', short: 'annual-report', meta: 'GPT-5 Mini · 84 pages · 1 min ago', status: 'processing' },
+      {
+        id: 'constitution', name: 'constitution-of-the-united-states.pdf', meta: 'Gemini 3.1 Flash Lite · 18 pages · 3 min ago',
+        status: 'ready', pages: 18,
+        overview: 'The founding charter of the United States. It creates a federal government with three separate branches, divides power between that government and the states, and sets out how the text itself can be changed.',
+        bullets: [
+          'Article I gives lawmaking power to a Congress of two chambers, the Senate and the House of Representatives.',
+          'Article II places executive power in a President elected to four-year terms.',
+          'Article III creates the Supreme Court and lets Congress set up lower courts.',
+          'Article V explains how amendments are proposed and ratified; 27 follow the main text.'
+        ],
+        firstPage: 'We the People of the United States, in Order to form a more perfect Union, establish Justice, insure domestic Tranquility, provide for the common defence, promote the general Welfare, and secure the Blessings of Liberty to ourselves and our Posterity, do ordain and establish this Constitution for the United States of America.'
+      },
+      { id: 'receipt', name: 'receipt-scan-0412.pdf', meta: 'PyPDF · 1 page · 5 min ago', status: 'no_text' },
+      { id: 'lease', name: 'lease-agreement-draft.pdf', meta: 'Gemini 3.1 Flash Lite · 12 pages · 12 min ago', status: 'dead' },
+      {
+        id: 'federalist', name: 'federalist-papers-no-10.pdf', meta: 'PyPDF · 9 pages · 1 h ago',
+        status: 'ready', pages: 9,
+        overview: 'James Madison argues that a large republic is the best defense against factions, groups united by an interest that runs against the rights of others or the good of the whole.',
+        bullets: [
+          'Factions cannot be removed without destroying liberty, so their effects must be controlled instead.',
+          'A republic filters public opinion through elected representatives.',
+          'A large union makes it harder for any one faction to become a majority.'
+        ],
+        firstPage: 'Among the numerous advantages promised by a well-constructed Union, none deserves to be more accurately developed than its tendency to break and control the violence of faction.'
+      },
+      { id: 'archive', name: 'scanned-archive-1998.pdf', meta: 'GPT-5 Mini · 61.4 MB · 20 min ago', status: 'too_large' }
+    ];
+  }
+
+  pill(status) {
+    const map = {
+      queued: ['var(--surface-2)', 'var(--muted)', 'Queued'],
+      processing: ['var(--warn-soft)', 'var(--warn)', 'Processing'],
+      ready: ['var(--ok-soft)', 'var(--ok)', 'Ready'],
+      no_text: ['var(--surface-2)', 'var(--text)', 'No text'],
+      dead: ['var(--danger-soft)', 'var(--danger)', 'Failed'],
+      too_large: ['var(--surface-2)', 'var(--text)', 'Too large']
+    };
+    return map[status];
+  }
+
+  pages() {
+    return [
+      { n: 1, blocks: [
+        { isH: true, text: 'The Constitution of the United States' },
+        { isSub: true, text: 'Preamble' },
+        { isP: true, text: 'We the People of the United States, in Order to form a more perfect Union, establish Justice, insure domestic Tranquility, provide for the common defence, promote the general Welfare, and secure the Blessings of Liberty to ourselves and our Posterity, do ordain and establish this Constitution for the United States of America.' }
+      ] },
+      { n: 2, blocks: [
+        { isH: true, text: 'Article I' },
+        { isSub: true, text: 'Section 1' },
+        { isP: true, text: 'All legislative Powers herein granted shall be vested in a Congress of the United States, which shall consist of a Senate and House of Representatives.' },
+        { isSub: true, text: 'Section 2' },
+        { isP: true, text: 'The House of Representatives shall be composed of Members chosen every second Year by the People of the several States, and the Electors in each State shall have the Qualifications requisite for Electors of the most numerous Branch of the State Legislature.' }
+      ] },
+      { n: 3, blocks: [
+        { isSub: true, text: 'Section 3' },
+        { isP: true, text: 'The Senate of the United States shall be composed of two Senators from each State, chosen by the Legislature thereof, for six Years; and each Senator shall have one Vote.' }
+      ] }
+    ];
+  }
+
+  renderVals() {
+    const s = this.state || {};
+
+    const dark = s.dark !== undefined ? s.dark : (this.props.dark ?? false);
+    const scene = s.scene !== undefined ? s.scene : (this.props.scene ?? 'feed');
+    const notice = this.props.notice ?? 'none';
+    const L = this.layout(this.props.layout ?? 'desktop');
+
+    const isEmpty = (this.props.scene ?? 'feed') === 'empty';
+    const all = isEmpty ? [] : this.documents();
+
+    const docs = all.map((d) => {
+      const [pillBg, pillFg, label] = this.pill(d.status);
+      return {
+        ...d,
+        pillBg, pillFg, label,
+        isReady: d.status === 'ready',
+        isBusy: d.status === 'queued' || d.status === 'processing',
+        isNoText: d.status === 'no_text',
+        isDead: d.status === 'dead',
+        isTooLarge: d.status === 'too_large',
+        busyText: d.status === 'queued'
+          ? 'Waiting for a worker. Pages and a summary appear here when it finishes.'
+          : 'Reading pages with GPT-5 Mini. The summary appears here when it finishes.',
+        copyText: s.copied === d.id ? 'Copied' : '',
+        openPages: () => this.setState({ scene: 'pages' }),
+        askReparse: () => this.setState({ scene: 'confirm', kind: 'reparse', target: d.name }),
+        askRequeue: () => this.setState({ scene: 'confirm', kind: 'retry', target: d.name }),
+        askDelete: () => this.setState({ scene: 'confirm', kind: 'delete', target: d.name }),
+        copy: () => {
+          this.setState({ copied: d.id });
+          setTimeout(() => this.setState({ copied: null }), 2000);
+        }
+      };
+    });
+
+    const busy = docs
+      .filter((d) => d.isBusy)
+      .map((d) => ({
+        id: d.id,
+        short: d.short,
+        label: d.label,
+        statusColor: d.status === 'processing' ? 'var(--warn)' : 'var(--muted)',
+        ring: d.status === 'processing' ? '2.5px solid var(--primary)' : '2px dashed var(--line-strong)'
+      }));
+
+    const filter = s.filter || this.props.filter || 'parsed';
+    const groups = {
+      parsed: (d) => d.isReady || d.isNoText,
+      failed: (d) => d.isDead || d.isTooLarge,
+      all: () => true
+    };
+    const feed = docs.filter(groups[filter]);
+
+    const chip = (value, label) => {
+      const on = filter === value;
+      return {
+        label,
+        count: docs.filter(groups[value]).length,
+        pressed: on ? 'true' : 'false',
+        bg: on ? 'var(--primary-soft)' : 'transparent',
+        fg: on ? 'var(--primary)' : 'var(--text)',
+        border: on ? 'var(--primary)' : 'var(--line-strong)',
+        pick: () => this.setState({ filter: value })
+      };
+    };
+
+    const kind = s.kind || (scene === 'delete' ? 'delete' : scene === 'retry' ? 'retry' : 'reparse');
+    const target = s.target || 'lease-agreement-draft.pdf';
+    const confirmCopy = {
+      reparse: {
+        title: 'Reparse ' + target + '?',
+        body: 'Its pages and summary are cleared, then it runs again with the parser you pick.',
+        action: 'Reparse', actionBg: 'var(--primary)', actionFg: 'var(--on-primary)'
+      },
+      retry: {
+        title: 'Retry ' + target + '?',
+        body: 'It goes back in the queue with the same parser, Gemini 3.1 Flash Lite.',
+        action: 'Retry', actionBg: 'var(--primary)', actionFg: 'var(--on-primary)'
+      },
+      delete: {
+        title: 'Delete ' + target + ' forever?',
+        body: "The PDF, its pages and its summary are removed for good. This can't be undone.",
+        action: 'Delete forever', actionBg: 'var(--danger)', actionFg: 'var(--on-danger)'
+      }
+    };
+    const confirm = { ...confirmCopy[kind], isReparse: kind === 'reparse' };
+
+    return {
+      T: this.theme(dark),
+      L: { ...L, chipsPad: L.topbar ? '12px 16px 4px' : '16px 0 4px' },
+      dark,
+      light: !dark,
+      themeLabel: dark ? 'Light mode' : 'Dark mode',
+      docs: feed,
+      busy,
+      isEmpty,
+      showChips: !isEmpty,
+      chips: [chip('parsed', 'Parsed'), chip('failed', 'Failed'), chip('all', 'All')],
+      confirm,
+      showStories: busy.length > 0,
+      showRate: notice === 'rate',
+      showOffline: notice === 'offline',
+      showOverlay: ['upload', 'pages', 'confirm', 'retry', 'delete'].includes(scene),
+      isUpload: scene === 'upload',
+      isPages: scene === 'pages',
+      isConfirm: ['confirm', 'retry', 'delete'].includes(scene),
+      pageList: this.pages(),
+      toggleTheme: () => this.setState({ dark: !dark }),
+      openUpload: () => this.setState({ scene: 'upload' }),
+      closeOverlay: () => this.setState({ scene: isEmpty ? 'empty' : 'feed' })
+    };
+  }
+}
+</script>
+</body>
+</html>

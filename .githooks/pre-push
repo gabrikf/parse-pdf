@@ -1,0 +1,8 @@
+#!/usr/bin/env bash
+# Before push: print the agent review command for the commits being pushed.
+# The script does not call a model and does not edit code. passed: false is not a pass.
+# Run the review in Claude Code with /review-before-push.
+set -euo pipefail
+
+root="$(git rev-parse --show-toplevel)"
+exec "$root/scripts/review-before-push.sh"

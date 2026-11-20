@@ -1,0 +1,29 @@
+# Harness state: the work phase is per checkout (scripts/phase.sh)
+.harness/
+
+# Local Claude Code settings
+.claude/settings.local.json
+
+# Secrets
+.env
+
+# The hiring company's test brief stays private
+docs/private/
+
+# Python
+.venv/
+__pycache__/
+*.py[cod]
+.coverage
+.coverage.*
+htmlcov/
+.mypy_cache/
+.pytest_cache/
+.ruff_cache/
+
+# Node
+node_modules/
+dist/
+
+# Delivery zip
+parse-pdf.zip

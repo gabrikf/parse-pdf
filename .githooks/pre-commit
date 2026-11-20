@@ -1,0 +1,50 @@
+#!/usr/bin/env bash
+# Commit gate. Runs only for the side whose code is staged, so a docs, spec or design commit
+# (discover and plan) runs nothing. Frontend: ESLint with SonarJS. Backend: ruff + mypy --strict.
+set -euo pipefail
+
+root="$(git rev-parse --show-toplevel)"
+cd "$root"
+
+staged="$(git diff --cached --name-only --diff-filter=ACMR)"
+frontend=0
+backend=0
+while IFS= read -r f; do
+  case "$f" in
+    frontend/*.ts | frontend/*.tsx | frontend/*.js | frontend/*.jsx | frontend/*.mjs | frontend/*.cjs) frontend=1 ;;
+    backend/*.py | backend/pyproject.toml) backend=1 ;;
+  esac
+done <<<"$staged"
+
+if [[ "$frontend" -eq 0 && "$backend" -eq 0 ]]; then
+  exit 0
+fi
+
+find_tool() {
+  local name="$1" dir
+  for dir in "$root/.venv/bin" "$root/backend/.venv/bin"; do
+    if [[ -x "$dir/$name" ]]; then
+      echo "$dir/$name"
+      return
+    fi
+  done
+  command -v "$name" || true
+}
+
+if [[ "$frontend" -eq 1 ]]; then
+  if [[ ! -x "$root/frontend/node_modules/.bin/eslint" ]]; then
+    echo "frontend ESLint is not installed. Run: npm ci --prefix frontend" >&2
+    exit 1
+  fi
+  (cd frontend && node_modules/.bin/eslint .)
+fi
+
+if [[ "$backend" -eq 1 ]]; then
+  ruff="$(find_tool ruff)"
+  mypy="$(find_tool mypy)"
+  if [[ -z "$ruff" || -z "$mypy" ]]; then
+    echo "ruff or mypy is not installed. Install the backend dev dependencies (see AGENTS.md, Setup)." >&2
+    exit 1
+  fi
+  (cd backend && "$ruff" check . && "$ruff" format --check . && "$mypy")
+fi
