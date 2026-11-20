@@ -88,6 +88,7 @@ Proof: run backend | test_unknown_state_is_422 PASSED
 **C17** - An 11th upload in 60 s is `429 rate_limited` with whole-second `Retry-After`; a 3rd in-flight upload is `429 too_many_uploads_in_progress`; a 21st session from one IP in 60 s is `429 rate_limited` (AC 17)
 Proof: run backend | test_11th_upload_in_60s_is_429_rate_limited PASSED
 Proof: run backend | test_third_upload_in_flight_is_429 PASSED
+Proof: run backend | test_release_frees_the_last_slot_and_never_leaves_a_negative_count PASSED
 Proof: run backend | test_21st_session_from_one_ip_within_60s_is_429 PASSED
 Proof: `scripts/proofs/session-limit.sh`
 
@@ -155,6 +156,7 @@ Proof: run backend | test_unsafe_input_ends_dead_guardrail_rejected_without_a_su
 **C32** - 429, 5xx and a 60 s timeout retry up to 6 attempts (1 s base, x2, 60 s cap, full jitter, `Retry-After` as a floor); 429, 429, 200 ends after 3 calls; `Retry-After: 7` waits >= 7 s; 6 x 429 leaves the job pending and `processing`, and the next delivery counts `deliveries` 2 (AC 32)
 Proof: run backend | test_429_429_200_returns_after_three_calls PASSED
 Proof: run backend | test_retry_after_7_waits_at_least_7s PASSED
+Proof: run backend | test_retry_after_is_capped_like_the_backoff PASSED
 Proof: run backend | test_six_429s_raise_transient PASSED
 Proof: run backend | test_5xx_is_retried PASSED
 Proof: run backend | test_timeout_is_retried PASSED
@@ -225,6 +227,7 @@ Proof: run backend | test_2990_used_plus_11_pages_is_refused_and_not_stored PASS
 Proof: run backend | test_reparse_past_the_budget_is_429 PASSED
 Proof: run backend | test_requeue_of_a_model_document_past_the_budget_is_429 PASSED
 Proof: run backend | test_requeue_of_a_model_document_counts_its_pages PASSED
+Proof: run backend | test_a_failed_restart_releases_the_reserved_pages PASSED
 Proof: run backend | test_next_utc_day_starts_at_0 PASSED
 Proof: run backend | test_each_summary_adds_one_budget_page PASSED
 Proof: run backend | test_pypdf_is_never_refused_by_the_budget PASSED
@@ -269,6 +272,7 @@ Proof: run backend | test_right_password_stores_decrypted_bytes_and_never_the_pa
 
 **C54** - A first visit creates the session and shows the empty-feed message and the upload form, as `captures/PhoneEmpty.png` draws; documents show newest first (AC 54)
 Proof: run e2e | ✓ first visit creates a session and shows the empty feed
+Proof: run web | ✓ waits out a 429 on a new session for Retry-After and asks again until it gets one
 Proof: browser - reach the empty feed at 375 x 812, save `captures/PhoneEmpty.running.png`
 
 **C55** - The parser select offers exactly `pypdf`, `gemini-3.1-flash-lite`, `gpt-5-mini`, `pypdf` selected by default (AC 55)
@@ -280,6 +284,7 @@ Proof: run e2e | ✓ a 21st file shows up to 20 files per upload
 
 **C57** - Submit sends one upload request, shows each accepted file in the feed with its status and each rejected file inline with its reason, as `captures/DesktopUpload.png` draws (AC 57)
 Proof: run e2e | ✓ upload 3 samples by picker reaches the parsed feed
+Proof: run web | ✓ ignores the answer of a batch sent before the dialog was closed
 Proof: run e2e | ✓ refused files show their reason inline
 Proof: browser - submit 3 files with 1 refused at 1280 x 1240, save `captures/DesktopUpload.running.png`
 
@@ -289,6 +294,8 @@ Proof: run e2e | ✓ a locked file asks for its password and re-sends only that 
 **C59** - While any document is active the page polls `state=active` every 2,000 ms, refetches the feed when one leaves, and stops when the list is empty (AC 59)
 Proof: run web | ✓ polls the active list every 2000 ms and stops when it is empty
 Proof: run web | ✓ refetches the feed when a document leaves the active list
+Proof: run web | ✓ refetches the feed when an active document moves from queued to processing
+Proof: run web | ✓ marks the lists and the budget stale but never a page-1 preview
 
 **C60** - A `ready` document shows its summary and pages 50 at a time with a control for the next 50; `<script>alert(1)</script>` shows as literal text, as `captures/PhonePages.png` draws (AC 60)
 Proof: run e2e | ✓ the pages sheet shows 50 pages and loads the next 50
@@ -310,6 +317,7 @@ Proof: browser - open the reparse confirmation at 375 x 812, save `captures/Phon
 
 **C63** - An unreachable API shows an error with a retry control; a `429` shows the wait in seconds from `Retry-After` (AC 63)
 Proof: run web | ✓ an unreachable api shows an error with a retry control
+Proof: run web | ✓ shows the offline banner while a read fails and clears it when the read succeeds again
 Proof: run e2e | ✓ a rate-limited upload shows the wait in seconds
 Proof: run web | ✓ announces the wait when it starts and when it ends, and nothing in between
 
@@ -317,6 +325,7 @@ Proof: run web | ✓ announces the wait when it starts and when it ends, and not
 Proof: run e2e | ✓ no horizontal scroll and touch targets are at least 44 px
 Proof: run e2e | ✓ keyboard-only upload and confirm with a visible focus ring
 Proof: run e2e | ✓ dialogs close on escape and keep focus inside
+Proof: run e2e | ✓ the pages sheet scrolls by keyboard and a dialog opened from more actions gives focus back
 
 **C65** - The page sends requests only to its own origin under `/api/v1/`, never to OpenRouter, Redis or the bucket; record in `evidence/upload-page/` (AC 65)
 Proof: run e2e | ✓ the page calls only its own origin under /api/v1/
@@ -344,6 +353,7 @@ Proof: run e2e | ✓ wide screens show both rails with the budget and phones a t
 
 **C71** - "Copy summary" copies the summary markdown and shows "Copied" for 2 s (AC 71)
 Proof: run e2e | ✓ copy summary copies the markdown and shows copied
+Proof: run web | ✓ says it could not copy when the browser refuses, with no unhandled rejection
 
 **C72** - The feed opens on "Parsed" (`state=parsed`); "Failed" shows `dead` and `too_large`; "All" shows every document newest first; each chip shows its count; chips never filter the stories row; the choice resets on each visit, as `captures/PhoneFailed.png` draws (AC 72)
 Proof: run e2e | ✓ parsed, failed and all chips filter the feed with counts
@@ -436,7 +446,7 @@ Proof: run backend | test_ensure_bucket_twice_in_a_row_is_a_no_op PASSED
 ## Handoff
 
 - **Settled mid-build:** none
-- **Dispatched:** Verifier at `19cf1ff`, returned; screens round 1 at `19cf1ff`, returned; screens round 2 at `28a6e1c`, returned; new screens review (AD-049) round 1 at `932cbba`, returned; Verifier on 4aa581f..68cfd98 at `68cfd98`, returned (FAIL, 3 findings, closed by `9de7ed3`); new screens review round 2 at `68cfd98`, returned (11 match); AD-050 screens review round 1 at `b041b7b` (pictures re-saved at `9de7ed3`), returned (9 match, PhoneFailed and PhoneDelete diverge: no stories row, a capture race fixed by `ebd58a3`); AD-050 round 2 at `ebd58a3`, returned (11 match)
+- **Dispatched:** Verifier at `19cf1ff`, returned; screens round 1 at `19cf1ff`, returned; screens round 2 at `28a6e1c`, returned; new screens review (AD-049) round 1 at `932cbba`, returned; Verifier on 4aa581f..68cfd98 at `68cfd98`, returned (FAIL, 3 findings, closed by `9de7ed3`); new screens review round 2 at `68cfd98`, returned (11 match); AD-050 screens review round 1 at `b041b7b` (pictures re-saved at `9de7ed3`), returned (9 match, PhoneFailed and PhoneDelete diverge: no stories row, a capture race fixed by `ebd58a3`); AD-050 round 2 at `ebd58a3`, returned (11 match); whole-application review (6 lanes + judge, AD-051/AD-052) applied in `da2480d`; AD-052 screens review round 1 at `da2480d`, returned (2 match, 9 diverge on the story-circle glyph, fixed by `2243668`); AD-052 round 2 at `2243668`, returned (11 match)
 - **Boundary:** S1-S5 committed in 0967d3c (AD-033), C82 in a5244c8, C1's clean-checkout record in a5f5361; S6 (C54-C73) and S7 (C74-C80) committed after them; every slice pushed to `origin/main`
 - **Abandoned:** a `ProcessPoolExecutor` for inspection and parsing (it cannot kill a hung child; AD-026); `--reporter=list` on the e2e Run line (a CLI reporter replaces the config's, so no HTML report was written: the Run line now uses the config's list and HTML reporters); the stub's fail-once keyed on the whole text (a retried document's summary call was refused again; AD-034)
 - **Walked:** on the Vite dev server (`.claude/launch.json`, port 5180, `/api` proxied to the e2e stack) by `frontend/captures/running.capture.ts` at each frame's size, every state reached from the one route `/`: empty feed (first visit) -> upload dialog with 3 files, 1 refused ("Upload PDFs" in the rail or tab bar) -> stories row with 2 active files -> Parsed feed with a ready, a no_text and a ready card -> pages sheet ("View all 85 pages") -> reparse confirmation (the card's reparse icon) -> Failed chip with a dead and a too_large card -> Delete forever confirmation (the dead card's button); each state saved as `captures/<Frame>.running.png` and compared with its frame by eye before commit (the reparse parser rows and the upload dialog's "Add more files" were fixed to match)
