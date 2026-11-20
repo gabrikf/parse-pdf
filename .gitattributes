@@ -1,8 +1,13 @@
 # Agent tooling stays in the repo but is left out of `git archive` (scripts/package.sh).
+.claude export-ignore
 .claude/** export-ignore
+.cursor export-ignore
 .cursor/** export-ignore
+.specs export-ignore
 .specs/** export-ignore
+.design export-ignore
 .design/** export-ignore
+evidence export-ignore
 evidence/** export-ignore
 docs/harness.md export-ignore
 skills-lock.json export-ignore
@@ -11,4 +16,5 @@ CLAUDE.md export-ignore
 .githooks/pre-push export-ignore
 scripts/review-before-push.sh export-ignore
 scripts/phase.sh export-ignore
+scripts/hooks export-ignore
 scripts/hooks/** export-ignore
