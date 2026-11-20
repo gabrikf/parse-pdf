@@ -1,7 +1,7 @@
 # Document processing - upload PDFs, parse per page, summarize, async on Redis Streams
 
 **Approved**: 2026-11-19 - user: "Approve the plan"
-**Settled mid-build:** 2026-11-19 (design session, before any build) - user: "use instagram as the base layout but with other colors choose which combine more here purple or green as the primary and do it with light and dark mode options"; then chose fonts "Keep both", stories row "Yes, progress rings", desktop "Instagram 3 columns", prototype "Live HTML mockup" - AD-020; criteria 67-71 and `GET /api/v1/budget` added; then "we must have a chip clickable filter that is default just already parsed docs, and will have the other option to show all parsed queued and processing, on stories they will never be ommited, this filter is only for the feed aread" - AD-021, criteria 16 and 72, `state` on `GET /api/v1/documents`; then "how about the failed ones? we must have one option to retry and see the failed, retry or remove forever" - AD-022, criteria 16, 72 and 73 rewritten: Parsed / Failed / All chips, Retry and Delete forever on failed cards; canvas frames PhoneFailed and PhoneDelete approved: "Looks right"
+**Settled mid-build:** 2026-11-19 (design session, before any build) - user: "use instagram as the base layout but with other colors choose which combine more here purple or green as the primary and do it with light and dark mode options"; then chose fonts "Keep both", stories row "Yes, progress rings", desktop "Instagram 3 columns", prototype "Live HTML mockup" - AD-020; criteria 67-71 and `GET /api/v1/budget` added; then "we must have a chip clickable filter that is default just already parsed docs, and will have the other option to show all parsed queued and processing, on stories they will never be ommited, this filter is only for the feed aread" - AD-021, criteria 16 and 72, `state` on `GET /api/v1/documents`; then "how about the failed ones? we must have one option to retry and see the failed, retry or remove forever" - AD-022, criteria 16, 72 and 73 rewritten: Parsed / Failed / All chips, Retry and Delete forever on failed cards; canvas frames PhoneFailed and PhoneDelete approved: "Looks right"; then, answering the build's stops: "1- you have my ok" (S6 frame captures and the sample downloads; the two public samples were downloaded the same day into `samples/`), "2- if the decision is easy to decide what is better you take, just if is a metter of preference, but most part try to do at your own" - AD-023, "4- really? if you can you can push, if is not allowed you can just commit and we push in the end" - AD-023 (push to `origin/main` after each slice commit is approved), "6: perfect, if possible use as well playwright cli to test all and guarantee we have no issues." - AD-024, criterion 81; the two loose text labels on the DesktopDark frame are notes, not UI - AD-025
 **Review:** <written when the review is sent - sent at <HEAD short hash>>
 **Fix pass:** <written when the fix pass is made>
 
@@ -548,6 +548,16 @@ A reviewer can run, demo and judge the work from the zip alone.
 80. The backend SHALL pass `ruff check`, `ruff format --check`, `mypy --strict`, `lint-imports`
     and `scripts/coverage-gate.sh` (line and branch >= 85%), with no module under `app/` over
     200 lines; the frontend SHALL pass `npm --prefix frontend run lint` and `tsc --noEmit`
+81. WHEN `npm --prefix frontend run e2e` runs THEN every Playwright scenario SHALL pass in Chromium
+    at 375 x 812, 768 x 1024 and 1280 x 1240, light and dark, run by the Playwright CLI
+    (`npx playwright test`) against the Compose stack plus its e2e override (AD-024), with model
+    calls answered by a local OpenRouter stub (`OPENROUTER_BASE_URL`), never the real key
+    - scenarios: upload 3 samples by picker -> stories row -> Parsed feed; pages sheet; Copy
+      summary; Parsed / Failed / All chips and counts; Retry a `dead` document -> queued in the
+      stories row; Delete forever -> gone after reload; reparse with another parser; refused file
+      (empty, wrong type) shows its error; rate-limit notice; keyboard-only upload and confirm
+    - the run writes its HTML report and one screenshot per scenario and size to `evidence/e2e/`;
+      a failed scenario fails the command (no retries that hide a flake: `retries: 0`)
 
 ## Out of scope
 
@@ -594,16 +604,22 @@ A reviewer can run, demo and judge the work from the zip alone.
 | Inspection and parse timeouts | 10 s in the request (inspection), 300 s per pypdf parse in the worker (then `dead` `parse_timeout`), both in killable child processes | a hostile PDF cannot hang the event loop or a worker | n |
 | API processes | `uvicorn --workers 2` behind nginx | uses 2 cores; every limit lives in Redis, so it holds across processes | n |
 
-**Open questions:**
+**Open questions:** none.
 
-- S6 screen captures - `blocks` S6 only - the design is approved (2026-11-19, user: "Looks right");
-  its source is in `captures/canvas/` (9 `.dc.html` frames + `canvas.json`). Still missing: one PNG
-  per frame in `captures/`, each cited by an S6 criterion, before S6 starts. S1-S5 and S7 do not
-  wait on it.
-- Sample PDFs - `blocks go-live` - downloading public PDFs into `samples/` needs your go-ahead per
-  file (name, source, size) during S7.
+**Resolved questions:**
+
+- S6 screen captures - resolved 2026-11-19, user: "1- you have my ok". Before S6 starts, the build
+  renders one PNG per frame of `captures/canvas/` (11 `.dc.html` frames + `canvas.json`) into
+  `captures/`, at the frame's size, and each S6 criterion cites its PNG.
+- Sample PDFs - resolved 2026-11-19, user: "1- you have my ok". `samples/` holds the Constitution
+  (85 pages, govinfo.gov, public domain) and the W3C one-page test PDF, with sources and hashes in
+  `samples/SOURCES.md`; the scanned and encrypted samples are generated locally in S7, no download.
 
 ## Differences from the source
+
+- The two loose text labels on the DesktopDark frame ("annual-report" at 626,405 and
+  "scripts/phase.sh implement" at 261,371) are left out of the product: notes dropped on the
+  canvas, not UI. Confirmed: y - AD-025
 
 None - the product matches the approved canvas, updated for AD-022 (Parsed / Failed / All chips, the Failed frame and the Delete forever frame at phone width). Frames it does not draw (the offline banner at phone width, the Retry confirmation, any confirmation at desktop width) reuse the drawn banner and the drawn confirmations; Retry uses the reparse dialog without the parser fieldset.
 
@@ -611,6 +627,7 @@ None - the product matches the approved canvas, updated for AD-022 (Parsed / Fai
 
 - `docs/private/BWAI2.1_test_task.docx` (local, gitignored; verbatim text in `docs/private/test-task.md`) - binding - the brief: stack, parsers, Redis Streams, priorities
 - https://claude.ai/artifact/SjyC1dbhNKYs437TwVXWBX (design canvas, approved 2026-11-19, user: "Looks right") - binding - the upload page's composition, states and copy at 1280, 768 and 375 px in light and dark; source copied to `captures/canvas/`
+- `samples/SOURCES.md` - binding - the sample PDFs, their sources, licenses and hashes
 - `.specs/features/document-processing/request.md` - binding - a summary of the brief plus the user's decisions, verbatim
 - https://github.com/kliuchnikovv/summer, https://github.com/masalinas/bwaai2,
   https://github.com/Ralfidze/doc-pipeline - non-binding - public versions of the same task, read
