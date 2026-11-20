@@ -1,8 +1,11 @@
 {
   "name": "parse-pdf",
   "private": true,
-  "description": "Root scripts: activate the git hooks and run the frontend checks from the repository root.",
+  "description": "Root scripts: start the app (bootstrap), activate the git hooks and run the frontend checks.",
   "scripts": {
+    "bootstrap": "bash scripts/bootstrap.sh",
+    "down": "docker compose down",
+    "logs": "docker compose logs -f --tail=100",
     "prepare": "git config core.hooksPath .githooks",
     "lint": "npm --prefix frontend run lint",
     "typecheck": "npm --prefix frontend run typecheck",

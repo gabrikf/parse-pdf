@@ -10,6 +10,19 @@ shows the feed on a phone, a tablet or a laptop.
 You need Docker with Compose v2. Nothing else runs on the host.
 
 ```bash
+make bootstrap        # or: npm run bootstrap
+```
+
+It checks Docker, creates `.env` from `.env.example` with a random `SESSION_SECRET`, pulls the
+Redis and SeaweedFS images when missing, builds the API and web images, starts every service and
+waits for its healthcheck, then asks `/api/v1/health/ready` whether Redis, storage and OpenRouter
+are ready. There are no migrations or seeds: Redis needs no schema and the API creates the bucket
+when it starts. Running it again is safe and takes a few seconds. `make down` stops everything,
+`make logs` follows the logs, `make help` lists the rest.
+
+The same thing by hand:
+
+```bash
 cp .env.example .env
 python3 -c "import secrets; print('SESSION_SECRET=' + secrets.token_urlsafe(48))" >> .env
 docker compose up --build
