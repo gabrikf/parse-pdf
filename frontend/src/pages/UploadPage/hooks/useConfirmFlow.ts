@@ -1,5 +1,5 @@
-import { useMutation, useQueryClient } from '@tanstack/react-query'
-import { useState } from 'react'
+import { useQueryClient } from '@tanstack/react-query'
+import { useRef, useState } from 'react'
 
 import { deleteDocument, reparseDocument, requeueDocument } from '../../../shared/api/documents'
 import { UnreachableError } from '../../../shared/api/errors'
@@ -19,48 +19,60 @@ function send({ action, document, parser }: ConfirmRequest): Promise<unknown> {
  * Ask, then reparse, retry or delete (criterion 62). Success closes the confirmation; a refusal
  * (busy, changed, gone, out of budget) keeps it open with the reason, and either way the lists
  * refetch. An unreachable API closes it and shows the page's offline banner.
+ *
+ * Each answer belongs to the confirmation that sent it: if that one was cancelled and another
+ * opened meanwhile, the answer only refreshes the lists and never closes or labels the new one.
  */
 export function useConfirmFlow() {
   const client = useQueryClient()
   const { report } = useNotice()
   const [asking, setAsking] = useState<ConfirmRequest | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const [pendingFor, setPendingFor] = useState<ConfirmRequest | null>(null)
+  const open = useRef<ConfirmRequest | null>(null)
+  // Read in the click handler: a second click before the next render still sees the first.
+  const sending = useRef<ConfirmRequest | null>(null)
+
+  const show = (request: ConfirmRequest | null) => {
+    open.current = request
+    setError(null)
+    setAsking(request)
+  }
 
   const refresh = async () => {
     await client.invalidateQueries({ queryKey: queryKeys.documents })
     await client.invalidateQueries({ queryKey: queryKeys.budget })
   }
 
-  const mutation = useMutation({
-    mutationFn: send,
-    onSuccess: async () => {
-      setAsking(null)
-      await refresh()
-    },
-    onError: async (failure) => {
+  const confirm = async (request: ConfirmRequest) => {
+    const owner = open.current
+    if (owner === null || sending.current === owner) return
+    sending.current = owner
+    setError(null)
+    setPendingFor(owner)
+    try {
+      await send(request)
+      if (open.current === owner) show(null)
+    } catch (failure) {
       if (failure instanceof UnreachableError) {
-        setAsking(null)
+        if (open.current === owner) show(null)
         report(failure)
-        return
+      } else if (open.current === owner) {
+        setError(actionError(failure))
       }
-      setError(actionError(failure))
-      await refresh()
-    },
-  })
-
-  const ask = (request: ConfirmRequest) => {
-    setError(null)
-    setAsking(request)
-  }
-  const cancel = () => {
-    setError(null)
-    setAsking(null)
-  }
-  const confirm = (request: ConfirmRequest) => {
-    if (mutation.isPending) return
-    setError(null)
-    mutation.mutate(request)
+    } finally {
+      if (sending.current === owner) sending.current = null
+      setPendingFor((current) => (current === owner ? null : current))
+    }
+    await refresh()
   }
 
-  return { asking, error, pending: mutation.isPending, ask, cancel, confirm }
+  return {
+    asking,
+    error,
+    pending: asking !== null && pendingFor === asking,
+    ask: (request: ConfirmRequest) => show(request),
+    cancel: () => show(null),
+    confirm: (request: ConfirmRequest) => void confirm(request),
+  }
 }

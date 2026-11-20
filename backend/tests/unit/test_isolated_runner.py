@@ -56,3 +56,32 @@ async def test_a_cancelled_call_kills_its_child_and_frees_the_slot() -> None:
     assert multiprocessing.active_children() == []
     assert await runner.run(_double, (2,), 10) == 4
     assert time.monotonic() - started < 10
+
+
+def _length(data: bytes) -> int:
+    return len(data)
+
+
+async def _longest_gap(work: "asyncio.Future[list[int]]") -> float:
+    """The longest the event loop went without running a 1 ms ticker while ``work`` ran."""
+    longest = 0.0
+    last = time.monotonic()
+    while not work.done():
+        await asyncio.sleep(0.001)
+        now = time.monotonic()
+        longest = max(longest, now - last)
+        last = now
+    await work
+    return longest
+
+
+async def test_starting_children_with_large_pdfs_does_not_block_the_loop() -> None:
+    runner = IsolatedRunner(4)
+    data = b"%PDF-" + bytes(50 * 1024 * 1024)
+    await runner.run(_double, (1,), 30)  # the forkserver is up before the clock starts
+
+    work = asyncio.gather(*(runner.run(_length, (data,), 60) for _ in range(4)))
+    gap = await _longest_gap(work)
+
+    assert work.result() == [len(data)] * 4
+    assert gap < 0.2

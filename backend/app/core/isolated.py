@@ -8,6 +8,7 @@ and a deadline after which the child is killed.
 import asyncio
 import multiprocessing
 import resource
+import threading
 from collections.abc import Callable
 from multiprocessing.connection import Connection
 from multiprocessing.process import BaseProcess
@@ -34,6 +35,60 @@ def _child_main(conn: Connection, fn: Callable[..., Any], args: tuple[Any, ...])
         conn.close()
 
 
+class _Child:
+    """One child: started and waited on in a worker thread, killable from the loop at any time.
+
+    Starting a ``forkserver`` child pickles its arguments (a whole PDF) into a pipe, so the start
+    runs in the thread too, never on the event loop.
+    """
+
+    def __init__(self, context: Any, fn: Callable[..., Any], args: tuple[Any, ...]) -> None:
+        self._context = context
+        self._fn = fn
+        self._args = args
+        self._process: BaseProcess | None = None
+        self._killed = threading.Event()
+
+    def run(self, timeout_s: float) -> Any:
+        """Start the child, wait for its answer, and return it (worker thread)."""
+        receiver, sender = self._context.Pipe(duplex=False)
+        process = self._context.Process(
+            target=_child_main, args=(sender, self._fn, self._args), daemon=True
+        )
+        process.start()
+        sender.close()
+
+        # Publish the process, then look for a kill that came first: either this check or
+        # ``kill`` sees the other, so a cancelled call never leaves its child running.
+        self._process = process
+        if self._killed.is_set():
+            process.kill()
+        return _wait(receiver, process, timeout_s)
+
+    def kill(self) -> None:
+        """Kill the child now, or as soon as it has started."""
+        self._killed.set()
+        if self._process is not None:
+            self._process.kill()
+
+
+def _wait(receiver: Connection, child: BaseProcess, timeout_s: float) -> Any:
+    try:
+        if not receiver.poll(timeout_s):
+            child.kill()
+            raise IsolatedTimeoutError(f"no answer within {timeout_s} s")
+        ok, payload = receiver.recv()
+    except EOFError as exc:
+        raise IsolatedCrashError("child exited without an answer") from exc
+    finally:
+        receiver.close()
+        child.join(timeout=5)
+
+    if not ok:
+        raise IsolatedCrashError(str(payload))
+    return payload
+
+
 class IsolatedRunner:
     """Bounded pool of one-shot child processes.
 
@@ -52,34 +107,9 @@ class IsolatedRunner:
         still holds its memory, and the waiting thread wakes on the closed pipe.
         """
         async with self._slots:
-            receiver, child = self._start(fn, args)
+            child = _Child(self._context, fn, args)
             try:
-                return await asyncio.to_thread(self._wait, receiver, child, timeout_s)
+                return await asyncio.to_thread(child.run, timeout_s)
             except asyncio.CancelledError:
                 child.kill()
                 raise
-
-    def _start(
-        self, fn: Callable[..., Any], args: tuple[Any, ...]
-    ) -> tuple[Connection, BaseProcess]:
-        receiver, sender = self._context.Pipe(duplex=False)
-        child = self._context.Process(target=_child_main, args=(sender, fn, args), daemon=True)
-        child.start()
-        sender.close()
-        return receiver, child
-
-    def _wait(self, receiver: Connection, child: BaseProcess, timeout_s: float) -> Any:
-        try:
-            if not receiver.poll(timeout_s):
-                child.kill()
-                raise IsolatedTimeoutError(f"no answer within {timeout_s} s")
-            ok, payload = receiver.recv()
-        except EOFError as exc:
-            raise IsolatedCrashError("child exited without an answer") from exc
-        finally:
-            receiver.close()
-            child.join(timeout=5)
-
-        if not ok:
-            raise IsolatedCrashError(str(payload))
-        return payload
