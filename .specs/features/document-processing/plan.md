@@ -480,6 +480,7 @@ pages. The look is bound by the design from the `frontend-blueprint` session (op
 
 54. WHEN the page loads THEN the system SHALL create or reuse the session and show the session's
     documents newest first; with none it SHALL show an empty-feed message and the upload form
+    (capture: `captures/PhoneEmpty.png`)
 55. WHEN a user picks a parser THEN the select SHALL offer exactly the 3 parsers, `pypdf` selected
     by default
 56. WHEN a user adds files by the file picker, by drag-and-drop or by pasting THEN the system SHALL
@@ -487,6 +488,7 @@ pages. The look is bound by the design from the `frontend-blueprint` session (op
     "Up to 20 files per upload" and not add the extra files
 57. WHEN a user submits THEN the system SHALL send one upload request, show each accepted file in the
     feed with its status, and show each rejected file inline with the reason for its code
+    (capture: `captures/DesktopUpload.png`)
 58. WHEN a file comes back `password_required` or `wrong_password` THEN the page SHALL show a password
     field on that file, and submitting it SHALL re-send only that file with the password
 59. WHILE any document is `queued` or `processing` the page SHALL poll
@@ -494,12 +496,13 @@ pages. The look is bound by the design from the `frontend-blueprint` session (op
     that list, and stop polling when the list is empty
 60. WHEN a document is `ready` THEN the page SHALL show its summary and its pages 50 at a time with
     a control to load the next 50; markdown SHALL render without raw HTML, so page text
-    `<script>alert(1)</script>` shows as literal text
+    `<script>alert(1)</script>` shows as literal text (capture: `captures/PhonePages.png`)
 61. WHEN a document is `no_text` THEN the page SHALL show its hint and an action to reparse it with
     `gemini-3.1-flash-lite`
 62. WHEN a user chooses reparse (with a parser), requeue or delete THEN the page SHALL ask for
     confirmation naming the file and the action; cancel SHALL send nothing; confirm SHALL send the
-    request and show the new status, or remove the card after delete
+    request and show the new status, or remove the card after delete (capture:
+    `captures/PhoneConfirm.png`)
 63. IF the API is unreachable THEN the page SHALL show an error with a retry control; IF it answers
     `429` THEN it SHALL show the wait in seconds from `Retry-After`
 64. The page SHALL work at 375 px, 768 px and 1280 px wide with no horizontal scroll, every control
@@ -511,10 +514,12 @@ pages. The look is bound by the design from the `frontend-blueprint` session (op
 67. The page SHALL follow an Instagram-style feed with its own colors: one purple primary
     (`#6D28D9` light, `#A78BFA` dark), Newsreader for summaries and page text, Schibsted Grotesk
     for the interface, Lucide outline icons, hairline borders and no shadows or gradients; the
-    S6 design captures bind composition once they land
+    S6 design captures bind composition once they land (captures: `captures/Main.png`,
+    `captures/PhoneLight.png`, `captures/Tablet.png`)
 68. WHEN the page first loads THEN it SHALL follow the system color scheme; WHEN the user uses the
     theme toggle THEN it SHALL switch between light and dark and keep the choice on the next visit;
-    every text and control SHALL keep at least 4.5:1 contrast in both themes
+    every text and control SHALL keep at least 4.5:1 contrast in both themes (captures:
+    `captures/DesktopDark.png`, `captures/PhoneDark.png`)
 69. WHILE any document is `queued` or `processing` the page SHALL show it in a stories row above
     the feed as a circle whose ring shows its status; tapping one SHALL scroll to its card; a
     document SHALL leave the row when it reaches a final status, and the row SHALL hide when empty
@@ -528,12 +533,13 @@ pages. The look is bound by the design from the `frontend-blueprint` session (op
     `too_large` documents; WHEN the user selects "All" THEN it SHALL show every document, newest
     first; each chip SHALL show its count; the chips SHALL filter only the feed, never the stories
     row, which always shows every `queued` and `processing` document; the choice resets to
-    "Parsed" on each visit
+    "Parsed" on each visit (capture: `captures/PhoneFailed.png`)
 73. WHEN a `dead` document is shown THEN its card SHALL offer "Retry" (requeue, same parser),
     "Reparse with another parser" and "Delete forever"; a `too_large` card SHALL offer only
     "Delete forever"; each SHALL open its own confirmation naming the file, and "Delete forever"
     SHALL say it cannot be undone and use the danger color; after a confirmed retry the card SHALL
-    leave the Failed view and appear in the stories row as queued
+    leave the Failed view and appear in the stories row as queued (capture:
+    `captures/PhoneDelete.png`)
 
 ### S7: Demo kit, README, delivery zip (P3)
 
