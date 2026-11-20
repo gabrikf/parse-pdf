@@ -1,0 +1,123 @@
+# Document processing verification
+
+**Verdict**: FAIL
+**Proofs**: `proofs.md` at 19cf1ff
+**Verifier**: independent sub-agent (author != verifier)
+
+## Checks
+
+| Check | Test | Holds |
+| --- | --- | --- |
+| C1 | `scripts/compose-check.sh` (git archive of HEAD, `.env` from `.env.example`, health + restarts + `depends_on` read from `docker compose config`) | yes |
+| C2 | `test_settings.py` `test_unset_secret_is_refused`, `test_31_byte_secret_is_refused`, `test_32_byte_secret_starts`, `test_serve_exits_1_naming_the_variable` | yes |
+| C3 | `test_sessions_api.py` `test_new_session_sets_cookie_and_reuse_returns_same_id` | yes |
+| C4 | `test_sessions_api.py` `test_document_routes_without_session_are_401` (all 7 routes), `test_invalid_tokens_are_401`, `test_valid_bearer_is_accepted` | yes - the bad-token cases run on `GET /documents` only and only as Bearer, not as the cookie |
+| C5 | `test_upload_api.py` `test_upload_queues_each_file_in_order_and_stores_it`, `test_20_files_are_accepted` | yes |
+| C6 | `test_upload_api.py` `test_unknown_parser_is_422_and_stores_nothing` | yes - "stores nothing" is asserted on the stream only, not on `doc:*` keys or the bucket |
+| C7 | `test_upload_api.py` `test_no_files_is_422`, `test_21_files_are_422_and_store_nothing` | partly - "0 objects in the bucket" is not asserted; the test checks the stream and `doc:*` keys |
+| C8 | `test_upload_api.py` `test_bad_files_are_rejected_beside_good_ones`, `test_signature_after_first_1024_bytes_is_not_pdf`, `test_all_bad_files_is_422_all_files_rejected` | yes |
+| C9 | `test_upload_api.py` `test_size_boundary`, `test_page_boundary` | yes |
+| C10 | `test_upload_api.py` `test_body_over_limit_is_413_whatever_content_length_says`, `test_declared_length_over_limit_is_413` | yes |
+| C11 | `test_process_pypdf.py` `test_pypdf_job_ends_ready_with_text_pages_in_order` | yes |
+| C12 | `test_process_pypdf.py` `test_all_blank_pages_end_no_text_with_gemini_hint`, `test_one_character_on_page_2_of_3_is_not_no_text` | yes |
+| C13 | `test_documents_api.py` `test_not_ready_document_hides_summary_and_pages` (5 statuses), `test_ready_document_shows_summary_and_pages_in_order` | yes |
+| C14 | `test_documents_api.py` `test_foreign_document_is_404_like_a_missing_one` (read, pages, reparse, requeue, delete; error bodies compared) | yes |
+| C15 | `test_documents_api.py` `test_feed_shows_only_own_documents`, `test_feed_pages_newest_first_with_cursor`, `test_feed_default_limit_is_20`, `test_limit_50_is_accepted`, `test_bad_limit_is_422`, `test_bad_cursor_is_422` | yes - own example: 40 documents at `limit=20` give 20 + 20 with no cursor on page 2; 0 documents give no cursor |
+| C16 | `test_documents_api.py` `test_feed_states_filter_groups_and_count`, `test_feed_parsed_holds_no_text_and_failed_holds_too_large`, `test_unknown_state_is_422` | yes |
+| C17 | `test_upload_api.py` `test_11th_upload_in_60s_is_429_rate_limited`, `test_third_upload_in_flight_is_429`; `test_sessions_api.py` `test_21st_session_from_one_ip_within_60s_is_429` | no - the session test runs without uvicorn's proxy-header middleware that `serve.py` turns on, so it cannot see that the per-IP limit keys on a client-supplied `X-Forwarded-For` (own example: 30 of 30 sessions `201`) |
+| C18 | `test_http_edges_api.py` `test_cors_echoes_page_origin_with_credentials`, `test_cors_sends_nothing_for_other_origins` | yes |
+| C19 | `test_http_edges_api.py` `test_basic_preset_headers_on_200_404_422_500` | yes |
+| C20 | `test_documents_api.py` `test_envelope_and_request_id_on_success_and_error`; `test_http_edges_api.py` `test_unknown_route_is_an_envelope`, `test_500_is_an_envelope_without_exception_text` | yes |
+| C21 | `test_http_edges_api.py` `test_ready_is_200_when_redis_and_bucket_answer`, `test_ready_is_503_naming_each_failing_check`, `test_live_is_200` | yes - 503 is shown with both checks failing together, never one alone |
+| C22 | `scripts/proofs/concurrency.sh` -> `scripts/load/load_test.py` (exit 0 only on `{200: 5000}`, `{202: 50}`, `{ready: 50}`, `{"1": 50}`) | yes - runs on the e2e stack (stub model, `SESSIONS_PER_MINUTE_PER_IP=1000`, AD-032) |
+| C23 | `test_process_pypdf.py` `test_upload_returns_queued_before_any_worker_runs`; `test_event_loop_free.py` `test_live_answers_during_a_1000_page_upload` | yes - the first test cannot fail (no worker runs in it); the second holds the event-loop claim |
+| C24 | `scripts/proofs/redis-restart.sh` -> `scripts/load/redis_restart.py` | partly - the worker is stopped before Redis restarts and started after, so a worker reconnecting across the restart is never exercised; API reconnect and AOF survival are shown |
+| C25 | `test_retention.py` `test_every_doc_and_session_key_gets_a_week`, `test_a_status_change_refreshes_the_ttl`, `test_bucket_expires_objects_after_7_days` | yes - the refresh is asserted for `begin_run` only, not for `finalize` or `restart_run` |
+| C26 | `test_upload_api.py` `test_filename_is_cleaned_and_never_the_key` | no - only `../../etc/passwd.pdf` is asserted; the control-character drop and the 255-character cut the check names have no assertion (own example shows the code does both) |
+| C27 | `test_process_failures.py` `test_ready_is_set_only_with_the_stored_summary`; `test_summary_service.py` `test_summary_model_is_gemini_and_markdown_rules_are_asked` | yes |
+| C28 | `test_settings.py` `test_brief_model_id_resolves_to_openrouter_id`, `test_settings_normalize_summary_model_id` | yes |
+| C29 | `test_summary_service.py` `test_300000_characters_take_one_summary_call`, `test_300001_characters_take_two_maps_and_one_reduce` | yes |
+| C30 | `test_summary_service.py` `test_document_text_only_in_user_message_inside_delimiters`, `test_wrap_document_escapes_the_closing_delimiter` | yes |
+| C31 | `test_summary_service.py` `test_every_input_piece_and_the_summary_are_guarded`, `test_all_input_is_guarded_before_the_first_summary_call`, `test_unsafe_input_is_rejected_without_a_summary_call`, `test_unsafe_summary_is_rejected`; `test_process_failures.py` `test_unsafe_input_ends_dead_guardrail_rejected_without_a_summary_call` | yes |
+| C32 | `test_openrouter_chat_model.py` `test_429_429_200_returns_after_three_calls`, `test_retry_after_7_waits_at_least_7s`, `test_six_429s_raise_transient`, `test_5xx_is_retried`, `test_timeout_is_retried`, `test_a_call_past_the_deadline_is_a_retryable_timeout`; `test_retry_policy.py` `test_delays_double_from_1s_and_cap_at_60s`, `test_full_jitter_draws_between_zero_and_the_backoff`; `test_process_failures.py` `test_retries_run_out_and_the_entry_stays_pending_for_redelivery` | yes - the 60 s deadline itself is a settings default no test reads (the deadline test sets 0.2 s) |
+| C33 | `test_openrouter_chat_model.py` `test_permanent_statuses_are_not_retried`, `test_empty_key_is_not_configured_with_no_call`; `test_process_failures.py` `test_permanent_provider_errors_end_dead_without_retry` | yes |
+| C34 | `test_call_gate_redis.py` `test_40_calls_from_two_workers_start_30_then_10_after_60s`, `test_one_call_at_a_time_per_worker` | yes |
+| C35 | `test_worker_process.py` `test_sigkilled_worker_job_is_reclaimed_and_ends_ready`; `test_recovery_in_process.py` `test_idle_entry_is_reclaimed_by_another_worker` | yes |
+| C36 | `test_recovery_in_process.py` `test_claim_refresh_keeps_a_long_job_on_one_worker` | yes |
+| C37 | `test_recovery_in_process.py` `test_sixth_delivery_is_dead_letter_with_no_calls` (5th and 6th) | yes |
+| C38 | `test_process_pypdf.py` `test_redelivered_final_run_is_acked_with_no_calls` | yes - parser calls are not counted, but a re-parse would reach the summary and show in `chat.calls` |
+| C39 | `test_process_pypdf.py` `test_stale_run_and_deleted_document_are_dropped` | yes |
+| C40 | `test_recovery_in_process.py` `test_stop_signal_lets_the_running_job_finish`, `test_job_past_the_grace_stays_pending_for_reclaim`; `test_worker_process.py` `test_sigterm_exits_cleanly_and_heartbeat_goes_stale` | partly - "stops reading new entries" has no assertion (one entry only), and the process test never asserts the heartbeat goes stale that its name claims |
+| C41 | `test_heartbeat.py` `test_29s_old_is_fresh_and_31s_old_is_stale`, `test_missing_or_garbled_heartbeat_is_stale`, `test_main_exit_codes` | yes |
+| C42 | `test_model_page_parser.py` `test_23_pages_take_calls_of_10_10_3_and_return_markdown_pages`, `test_10_pages_take_one_call`, `test_request_sends_a_pdf_file_part_native_engine_and_json_schema`; `test_pdf_tools.py` `test_split_23_pages_into_10_10_3` | partly - the model id is injected by the test; nothing asserts that `gpt-5-mini` sends `openai/gpt-5-mini` and `gemini-3.1-flash-lite` sends `google/gemini-3.1-flash-lite` |
+| C43 | `test_model_page_parser.py` `test_invalid_answer_is_retried_twice_then_dead` (missing, repeated, added, not json), `test_one_invalid_answer_then_valid_succeeds` | yes |
+| C44 | `test_model_page_parser.py` `test_resumed_job_sends_only_missing_chunks` | yes - at unit level with an in-memory checkpoint; `save_chunk.lua` across a real redelivery is not exercised |
+| C45 | `test_budget_api.py` `test_2990_used_plus_10_pages_is_accepted_and_reaches_3000`, `test_2990_used_plus_11_pages_is_refused_and_not_stored`, `test_reparse_past_the_budget_is_429`, `test_next_utc_day_starts_at_0`, `test_pypdf_is_never_refused_by_the_budget`; `test_summary_service.py` `test_each_summary_adds_one_budget_page` | no - requeue of a `dead` model-parser document is not budgeted and no test looks (own example: `202` at 3,000 of 3,000, counter unchanged) |
+| C46 | `test_model_parsers_stub.py` `test_scanned_pdf_reaches_ready_with_markdown_pages[gemini-3.1-flash-lite]`, `[gpt-5-mini]` | partly - the stub answers any model, so both rows pass even if both parser kinds called the same model id |
+| C47 | `test_rerun_api.py` `test_reparse_a_final_document_queues_a_new_run_with_cleared_results` (ready, no_text, dead), `test_two_concurrent_reparses_give_one_202_and_one_409`, `test_reparse_with_a_bad_parser_is_422` | yes |
+| C48 | `test_rerun_api.py` `test_busy_documents_refuse_reparse_and_requeue`, `test_reparse_too_large_is_not_reparsable`; `test_transitions.py` `test_each_status_allows_or_refuses_each_action` | yes |
+| C49 | `test_rerun_api.py` `test_requeue_a_dead_document_keeps_its_parser`, `test_requeue_a_document_that_is_not_dead_is_409` | yes |
+| C50 | `test_rerun_api.py` `test_delete_removes_record_pages_chunks_feed_and_object`, `test_delete_a_processing_document_is_409`, `test_delete_a_queued_document_is_200` | yes |
+| C51 | `test_password_api.py` `test_empty_password_pdf_is_accepted_like_any_pdf`; `test_pdf_tools.py` `test_empty_password_pdf_opens_and_is_decrypted` | yes |
+| C52 | `test_password_api.py` `test_missing_or_wrong_password_is_rejected_and_nothing_stored`; `test_pdf_tools.py` `test_password_needed_wrong_and_right` | yes |
+| C53 | `test_password_api.py` `test_right_password_stores_decrypted_bytes_and_never_the_password` | yes |
+| C54 | `e2e/upload.spec.ts` `first visit creates a session and shows the empty feed` | partly - "documents show newest first" on the page has no assertion in any e2e scenario |
+| C55 | `e2e/upload.spec.ts` `the parser select offers exactly three parsers with pypdf selected` | yes |
+| C56 | `e2e/upload.spec.ts` `files added by picker, drop and paste are listed with name and size`, `a 21st file shows up to 20 files per upload` | yes |
+| C57 | `e2e/upload.spec.ts` `upload 3 samples by picker reaches the parsed feed`, `refused files show their reason inline` | yes - "one upload request" is counted only in C58's scenario |
+| C58 | `e2e/upload.spec.ts` `a locked file asks for its password and re-sends only that file` | yes |
+| C59 | `useActiveDocuments.test.tsx` `polls the active list every 2000 ms and stops when it is empty`, `refetches the feed when a document leaves the active list` | yes - with under 50 active documents; past 50 see the stories finding |
+| C60 | `e2e/reading.spec.ts` `the pages sheet shows 50 pages and loads the next 50`; `Markdown.test.tsx` `markdown shows raw html as literal text` | yes |
+| C61 | `e2e/reading.spec.ts` `a no_text card shows its hint and reparses with gemini` | yes |
+| C62 | `e2e/actions.spec.ts` `reparse with another parser asks first and cancel sends nothing`, `delete forever removes the card and it stays gone after reload` | yes - "cancel sends nothing" is asserted for reparse only, not requeue or delete |
+| C63 | `App.test.tsx` `an unreachable api shows an error with a retry control`; `e2e/notices.spec.ts` `a rate-limited upload shows the wait in seconds` | yes |
+| C64 | `e2e/layout.spec.ts` `no horizontal scroll and touch targets are at least 44 px`; `e2e/a11y.spec.ts` `keyboard-only upload and confirm with a visible focus ring`, `dialogs close on escape and keep focus inside` | yes |
+| C65 | `e2e/style.spec.ts` `the page calls only its own origin under /api/v1/` | yes |
+| C66 | `e2e/a11y.spec.ts` `every visible label and button is in sentence case` | yes |
+| C67 | `e2e/style.spec.ts` `the primary color, fonts and no shadows or gradients` | yes |
+| C68 | `e2e/layout.spec.ts` `the theme follows the system and the toggle is remembered`; `e2e/a11y.spec.ts` `text and controls keep 4.5 to 1 contrast` | yes |
+| C69 | `e2e/layout.spec.ts` `the stories row shows active documents and hides when empty` | partly - "tapping one scrolls to its card" is never exercised |
+| C70 | `e2e/layout.spec.ts` `wide screens show both rails with the budget and phones a tab bar` | partly - the budget is asserted as the text `of 3,000`, which a hard-coded limit also passes; the `used` value from `GET /api/v1/budget` is not checked |
+| C71 | `e2e/reading.spec.ts` `copy summary copies the markdown and shows copied` | partly - "Copied" is asserted to appear and to clear within 4 s; a label gone after 100 ms also passes |
+| C72 | `e2e/actions.spec.ts` `parsed, failed and all chips filter the feed with counts` | yes - "All newest first" is a count, not an order |
+| C73 | `e2e/actions.spec.ts` `retry a dead document moves it to the stories row as queued`, `a too_large card offers only delete forever` | partly - the `dead` card's "Reparse with another parser" and "Delete forever" are never asserted |
+| C74 | `python3 scripts/proofs/check_readme.py sections` | yes |
+| C75 | `python3 scripts/proofs/check_readme.py how-i-worked` | yes |
+| C76 | `python3 scripts/proofs/check_readme.py budget` | yes |
+| C77 | `python3 scripts/proofs/check_readme.py postman-and-samples` | yes - licenses are checked as one keyword in `SOURCES.md`, not per sample (each sample has one) |
+| C78 | `scripts/proofs/curl-walkthrough.sh` -> `scripts/proofs/curl_walkthrough.py` | yes |
+| C79 | `scripts/proofs/package-check.sh` | yes |
+| C80 | `scripts/coverage-gate.sh`; `test_module_size.py` `test_no_app_module_is_over_200_lines`; Build row of `proofs.md` (ruff, mypy, lint-imports, ESLint, tsc) | yes |
+| C81 | `npm --prefix frontend run e2e` (156 passed, 6 projects) | yes |
+| C82 | `test_bucket_setup.py` `test_concurrent_ensure_bucket_on_a_fresh_store_both_succeed`, `test_ensure_bucket_twice_in_a_row_is_a_no_op` | yes |
+
+## Own examples
+
+Run at `HEAD` 19cf1ff as a throwaway pytest file against the `compose.test.yaml` Redis and
+SeaweedFS (deleted afterwards, not committed):
+
+- AC 17, one IP and a spoofed `X-Forwarded-For` first hop (value neither plan nor checks name).
+  The app was wrapped in `uvicorn.middleware.proxy_headers.ProxyHeadersMiddleware(trusted_hosts="*")`,
+  which is what `serve.py` turns on (`proxy_headers=True, forwarded_allow_ips="*"`), and fed the
+  header nginx builds with `$proxy_add_x_forwarded_for`. The same client with `X-Forwarded-For: 203.0.113.9, 10.0.0.1` -> 20 x `201`, then `429` (holds).
+  The same client with `X-Forwarded-For: 198.51.100.<i>, 203.0.113.9` -> 30 x `201`, no `429` (breaks).
+- AC 15, 40 documents at `limit=20` (exact multiple) -> 20 with a cursor, then 20 with
+  `next_cursor: null`; 0 documents -> no cursor (holds).
+- AC 45, the other side of the budget: a `dead` 10-page `gpt-5-mini` document requeued with
+  3,000 of 3,000 used -> `202 queued`, counter still 3,000 (breaks: the whole file goes back to the model unbudgeted).
+- AC 26, `a<DEL>c.pdf`, a 304-character name, `C:\Users\me\report.pdf`, `dir/`, a name with
+  U+202E -> DEL and U+202E dropped, cut to 255, `report.pdf`, `document.pdf` (holds).
+
+## Findings
+
+| Finding | Evidence | Fix | Closed |
+| --- | --- | --- | --- |
+| The 20-sessions-per-IP limit can be skipped by anyone: it keys on the first `X-Forwarded-For` hop, which the client writes. With unlimited sessions, the per-session upload limits (10 a minute, 2 in flight) stop limiting anything | `backend/app/serve.py:41-42` `proxy_headers=True, forwarded_allow_ips="*"`; uvicorn 0.54 with `"*"` returns `x_forwarded_for_hosts[0]`; `frontend/nginx.conf:20` appends with `$proxy_add_x_forwarded_for`; own example: 30 of 30 `201` from one client. `test_21st_session_from_one_ip_within_60s_is_429` runs without the proxy middleware, so it cannot see this | have nginx overwrite the header (`proxy_set_header X-Forwarded-For $remote_addr;`), or trust only nginx's address in `forwarded_allow_ips`; add a test through `ProxyHeadersMiddleware` where a spoofed first hop still gets `429` on the 21st session | 28a6e1c - C17 `scripts/proofs/session-limit.sh` (nginx overwrites the header, AD-040) |
+| Requeue sends a `dead` model-parser document back to the model without checking or counting the daily budget. A file that keeps dying after the parse (for example `guardrail_rejected`) can be requeued over and over, each time re-parsing every page on the shared $5 key | `backend/app/documents/use_cases/rerun_documents.py` `RequeueDocumentUseCase.execute` never calls `ModelBudget.reserve`; `restart_run.lua` deletes the chunk checkpoints, so every page is sent again; own example: `202` at 3,000 of 3,000; no test covers requeue and the budget | reserve `page_count` on requeue when the parser uses a model, answer `429 model_budget_exhausted` past the cap, as reparse does; add the test (3,000 used + requeue of a 10-page `gpt-5-mini` document -> `429`, counter unchanged) | 28a6e1c - C45 `test_requeue_of_a_model_document_past_the_budget_is_429`, `test_requeue_of_a_model_document_counts_its_pages` (AD-041) |
+| The stories row and the active poll stop at 50 documents. A session with more than 50 `queued` or `processing` documents (reachable: 10 uploads of 20 files a minute) shows only 50 in the row, and a document past the 50th that finishes never triggers the feed refetch. AC 72 says the row "always shows every `queued` and `processing` document" | `frontend/src/pages/UploadPage/hooks/useActiveDocuments.ts:17` reads one page (`ACTIVE_PAGE_SIZE = 50`, `shared/api/documents.ts:5`) and never follows `meta.next_cursor`; `useActiveDocuments.test.tsx` uses 1-2 documents | follow `next_cursor` until it is null for the active list (or drive the row from `meta.counts.active` plus paging); add a unit test with 51 active documents that renders 51 stories and refetches when the 51st leaves | 28a6e1c - C72 `follows next_cursor so 51 active documents all show` |
+| C26 claims control characters are dropped and the name is cut to 255 characters, but its test asserts neither | `backend/tests/integration/test_upload_api.py` `test_filename_is_cleaned_and_never_the_key` checks only `../../etc/passwd.pdf`; the code holds (own example) | add cases: a name with a control character and a 300-character name, asserting the stored `filename` | 28a6e1c - C26 `test_filename_is_cleaned_and_never_the_key` (DEL, U+202E, 300 characters) |
+| C73's `dead` card actions are only partly asserted: "Reparse with another parser" and "Delete forever" could disappear from the card with every test green | `frontend/e2e/actions.spec.ts` `retry a dead document moves it to the stories row as queued` asserts only the Retry button | assert the `dead` card's buttons are exactly Retry, Reparse with another parser, Delete forever, and that each opens a confirmation naming the file | 28a6e1c - C73 `retry a dead document moves it to the stories row as queued` (three buttons, each confirmation) |
+| C69's "tapping one SHALL scroll to its card" has no test | `frontend/e2e/layout.spec.ts` `the stories row shows active documents and hides when empty` never clicks a story | click a story with its card off-screen and assert the card is in the viewport | 28a6e1c - C69 `the stories row shows active documents and hides when empty` (story tap scrolls an off-screen card into view) |
+| A worker that gets SIGTERM while blocked in `XREADGROUP` (up to 2 s) still starts the entry that read returns and gives it the full 30 s grace; no test asserts that a stopped worker reads nothing new, and the process test's name claims a stale heartbeat it never checks | `backend/app/worker/consumer_loop.py` `run` -> `_next_job` -> `_run_with_grace` (the `stop` flag is checked only before the read); `test_sigterm_exits_cleanly_and_heartbeat_goes_stale` asserts only exit codes | check `stop` after the read returns and leave the entry pending (unacked) when it is set; add a test with 2 queued entries where stop during the first leaves the second unread; assert the heartbeat check exits 1 after the stale window, or rename the test | 28a6e1c - C40 `test_entry_read_after_the_stop_signal_stays_pending_with_no_calls`; `test_sigterm_exits_cleanly_and_heartbeat_goes_stale` asserts the stale beat |
+| No test pins which model each parser kind calls; C42 injects the model id and C46's stub answers any model | `backend/app/worker_container.py` maps `GPT5_MINI` -> `settings.gpt_parser_model_id`; `test_model_parsers_stub.py` does not read the model the stub received | have the stub record the `model` field (or use a recording `ChatModel` through `build_worker_parts`) and assert `openai/gpt-5-mini` / `google/gemini-3.1-flash-lite` per parser | 28a6e1c - C46 `test_scanned_pdf_reaches_ready_with_markdown_pages` asserts the model the stub received per parser |
+| Looser assertions than the criterion fixes: C7 never counts bucket objects for 21 files; C70 asserts the static `of 3,000` and not the `used` value from `GET /api/v1/budget`; C71 never asserts "Copied" lasts about 2 s; C54 never asserts newest-first on the page; C25 asserts the TTL refresh for `begin_run` only; C24's proof stops the worker during the Redis restart, so worker reconnection is not shown | the tests named in the `## Checks` rows of C7, C24, C25, C54, C70, C71 | assert bucket `KeyCount` unchanged for 21 files; assert the rail shows the `used` from a seeded budget; assert "Copied" is still visible at 1.5 s and gone by 2.5 s; seed 2 documents and assert card order; assert TTLs after `finalize` and `restart_run`; keep the worker running through the restart in `redis_restart.py` | 28a6e1c - C7 `test_21_files_are_422_and_store_nothing` (KeyCount), C70 rail shows `used`, C71 cleared between 1.5 and 2.5 s, C54 newest first, C25 TTL after `finalize` and `restart_run`, C24 `redis-restart.sh` second phase with workers running |
