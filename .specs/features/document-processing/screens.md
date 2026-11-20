@@ -1,39 +1,44 @@
 # Document processing screens
 
 **Verifier**: independent sub-agent (author != verifier)
-**Round**: 2 (of the new review the user asked for, AD-049; round 1 at 932cbba; earlier review: round 1 at 19cf1ff, round 2 at 28a6e1c)
-**HEAD**: 68cfd98
+**Round**: 2 (of the AD-050 review; round 1 at b041b7b; earlier: AD-049 review round 1 at 932cbba and round 2 at 68cfd98; first review round 1 at 19cf1ff and round 2 at 28a6e1c)
+**HEAD**: ebd58a3
 
-Round 1 judged the pictures re-saved at 8335551 (HEAD 932cbba). It re-judged every row from the
-pictures and copied no earlier verdict. Round 2 judges the pictures re-saved at 68cfd98, which
-changes only the password row's icon in `FileRow.tsx`. It reopened the one row round 1 marked
-`differs`, the DesktopUpload padlock, and looked at every `same` row of all 11 re-saved pictures for
-a visible regression. It found none. Nothing else was added or re-judged. The only change to the
-notes is that the budget numbers now read as in the re-saved pictures.
+Round 1 judged the pictures re-saved at 9de7ed3 (HEAD b041b7b). It re-judged every row of all 11
+pictures and copied no earlier verdict; two rows differed (the stories row on PhoneFailed and
+PhoneDelete). Round 2 judges the pictures re-saved at ebd58a3, which changes only the capture
+script (`frontend/captures/running.capture.ts`: two Gemini files are uploaded before the Failed
+frames). It reopened the two `differs` rows, now `same`, and looked at every `same` row of all 11
+re-saved pictures for a visible regression. It found none. Nothing else was added or re-judged; the
+only other changes are notes whose test data (budget numbers, counts, the rate-limit wait) now read
+as in the re-saved pictures. The re-saved pictures are in the working tree, not committed at
+ebd58a3.
 
 The pictures use the e2e stack's test data (local OpenRouter stub). File names, sizes, page counts,
-times, chip counts, budget numbers, summary text, the error reason for each `error_code`, feed
-order and the parser each document used all differ from the canvas sample data. They are recorded
-as notes on `same` rows. One item from `## Differences from the source` applies: the two loose text
-labels on DesktopDark are not UI (AD-025).
+times, chip counts, budget numbers, the stub summary text (including its `Key points` heading), the
+error reason for each `error_code`, feed order and the parser each document used all differ from
+the canvas sample data. They are recorded as notes on `same` rows. One item from
+`## Differences from the source` applies: the two loose text labels on DesktopDark are not UI
+(AD-025).
 
 All 11 pictures are at their frame's size: phone 375x812, tablet 768x1024, desktop 1280x1240.
 Their text reads at the capture's size, so no picture is resized. Icons were compared glyph by
-glyph at 2-4x zoom. In round 1 every glyph matched except the padlock on DesktopUpload; round 2 shows it as the capture draws it.
+glyph at 2-4x zoom (rail and tab bar icons, cloud upload, close, check, warning triangle, padlock,
+action row icons, story circles, sun and moon); every glyph matches.
 
 | Screen | Compared with | Verdict | Finding |
 | --- | --- | --- | --- |
 | `captures/PhoneEmpty.running.png` | `captures/PhoneEmpty.png` | matches | 0 rows differ; no regression |
-| `captures/DesktopUpload.running.png` | `captures/DesktopUpload.png` | matches | round 1's padlock row is now same; no regression |
-| `captures/PhonePages.running.png` | `captures/PhonePages.png` | matches | 0 rows differ; no regression; the sheet starts under the top bar |
+| `captures/DesktopUpload.running.png` | `captures/DesktopUpload.png` | matches | 0 rows differ; no regression |
+| `captures/PhonePages.running.png` | `captures/PhonePages.png` | matches | 0 rows differ; no regression; the markdown subheading cannot be judged (the stub pages have none) |
 | `captures/PhoneConfirm.running.png` | `captures/PhoneConfirm.png` | matches | 0 rows differ; no regression |
 | `captures/Main.running.png` | `captures/Main.png` | matches | 0 rows differ; no regression |
 | `captures/PhoneLight.running.png` | `captures/PhoneLight.png` | matches | 0 rows differ; no regression |
 | `captures/Tablet.running.png` | `captures/Tablet.png` | matches | 0 rows differ; no regression |
 | `captures/DesktopDark.running.png` | `captures/DesktopDark.png` | matches | 0 rows differ; no regression |
 | `captures/PhoneDark.running.png` | `captures/PhoneDark.png` | matches | 0 rows differ; no regression |
-| `captures/PhoneFailed.running.png` | `captures/PhoneFailed.png` | matches | 0 rows differ; no regression; the size-limit wording of the too-large box cannot be judged (the picture shows the page limit) |
-| `captures/PhoneDelete.running.png` | `captures/PhoneDelete.png` | matches | 0 rows differ; no regression |
+| `captures/PhoneFailed.running.png` | `captures/PhoneFailed.png` | matches | round 1's stories row is now same; no regression; the size-limit wording of the too-large box cannot be judged (the picture shows the page limit) |
+| `captures/PhoneDelete.running.png` | `captures/PhoneDelete.png` | matches | round 1's stories row is now same; no regression |
 
 ### `captures/PhoneEmpty.running.png`
 
@@ -42,7 +47,7 @@ glyph at 2-4x zoom. In round 1 every glyph matched except the padlock on Desktop
 | top bar: wordmark `Parse PDF` left (serif italic, `PDF` purple), hairline under the bar | same | |
 | top bar right: budget `<n> of 3,000` (mono) over `model pages today` | same | note: 20 instead of 1,240 (data) |
 | no stories row, no filter chips | same | |
-| empty state, centered: outline circle holding a purple cloud-upload icon | same | note: the circle's border is a slightly lighter grey (shade) |
+| empty state, centered: outline circle holding a purple cloud-upload icon | same | note: the cloud glyph is a little smaller inside the circle (size) |
 | heading `No documents yet` (serif) | same | |
 | sentence `Upload a PDF to read it page by page, with a short summary at the top.` on two lines | same | |
 | filled purple button `Upload PDFs` | same | |
@@ -54,17 +59,17 @@ glyph at 2-4x zoom. In round 1 every glyph matched except the padlock on Desktop
 | Element | Result | Picture draws |
 | --- | --- | --- |
 | left rail: wordmark; `Feed` selected (tinted block), `Upload`, `Dark mode`, each with an outline icon; hairline right edge | same | |
-| right rail: `Parsers` guide (PyPDF, Gemini 3.1 Flash Lite and GPT-5 Mini, each with its lines; `Every summary is written by Gemini 3.1 Flash Lite.`), hairline, `Model pages today` (big serif number, `of 3,000`, purple meter, `Resets at 00:00 UTC. PyPDF parsing doesn't count.`), hairline, privacy line | same | note: 37 instead of 1,240, so the meter has a sliver of fill (data) |
+| right rail: `Parsers` guide (PyPDF, Gemini 3.1 Flash Lite and GPT-5 Mini, each with its lines; `Every summary is written by Gemini 3.1 Flash Lite.`), hairline, `Model pages today` (big serif number, `of 3,000`, purple meter, `Resets at 00:00 UTC. PyPDF parsing doesn't count.`), hairline, privacy line | same | note: 41 instead of 1,240, so the meter has a sliver of fill (data) |
 | backdrop: grey scrim over the whole page | same | |
-| backdrop: stories row (dashed `Upload` circle with plus, two document circles) and the `Parsed` chip under the scrim | same | note: both document rings are solid purple (two documents processing) where the capture has one dashed queued ring (data state) |
-| backdrop: feed under the scrim: ready card (summary box, action icons, `Page 1` preview, `View all <n> pages`), no-text card (`Reparse with Gemini`, `Delete`), next ready card | same | note: stub summary with a `Key points` label; next card `w3c-dummy.pdf` (data) |
-| dialog: white, rounded, centered over the feed; header `Upload PDFs`, close `×` on the right, hairline under the header | same | |
+| backdrop: stories row (dashed `Upload` circle with plus, two document circles) and the `Parsed` chip under the scrim | same | note: both document rings are solid purple (two processing) where the capture has one dashed queued ring (data state) |
+| backdrop: feed under the scrim: ready card (summary box, action icons, `Page 1` preview, `View all <n> pages`), no-text card (`Reparse with Gemini`, `Delete`), next ready card | same | note: stub summary with a `Key points` heading; next card `w3c-dummy.pdf` (data) |
+| dialog: white, rounded, centered over the feed; header `Upload PDFs`, close `×` on the right, hairline under the header | same | note: the dialog ends about 20 px higher because its rows are tighter (spacing) |
 | drop zone: dashed border, tinted fill, purple cloud-upload icon, `Drop PDFs here, or paste them`, `Up to 20 files, 50 MB each`, outlined `Choose files` | same | note: the cloud icon is a little smaller and the zone a little shorter (spacing) |
 | `Parser` label with a native select under it | same | note: the select shows `PyPDF · plain text` instead of `Gemini 3.1 Flash Lite · markdown` (the user's pick) |
 | list heading `<n> of <m> files uploaded` | same | note: `2 of 4` |
 | accepted rows: green check, file name, mono size on the right, hairline between rows | same | note: `constitution.pdf` 3.8 MB and `federalist.pdf` 13 KB (data); rows a little tighter (spacing) |
 | rejected row: red warning triangle, name, size, red reason `This file isn't a PDF. Export it as a PDF and add it again.` | same | note: 19 B (data) |
-| password row icon: orange outline padlock left of the name | same | round 2: an outline padlock with an empty body, as the capture draws it. Round 1: differs, the padlock had a keyhole dot in its body |
+| password row icon: orange outline padlock left of the name | same | an outline padlock with an empty body, as the capture draws it |
 | password row text: name, size, orange `This PDF needs a password. It is used once to unlock the file and never stored.` on two lines | same | note: `w3c-dummy-locked.pdf`, 14 KB (data) |
 | password row field: `Password` input with a filled purple `Unlock` button on its right | same | note: `Unlock` is a little wider and the input a little shorter (spacing) |
 | footer with a hairline above it: outlined `Add more files` and filled purple `Done`, right-aligned | same | |
@@ -73,9 +78,9 @@ glyph at 2-4x zoom. In round 1 every glyph matched except the padlock on Desktop
 
 | Element | Result | Picture draws |
 | --- | --- | --- |
-| page behind: top bar with wordmark and budget, dimmed under a dark scrim | same | note: 35 (data) |
-| sheet: dark, rounded top corners, from just under the top bar to the bottom of the window | same | starts at about y 52, under the top bar, as the capture does |
-| sheet header: bold file name (cut with an ellipsis when long), close `×` on the right | same | note: `constitution-gemini.pdf` fits, so there is no ellipsis (shorter name) |
+| page behind: top bar with wordmark and budget, dimmed under a dark scrim | same | note: 39 (data) |
+| sheet: dark, rounded top corners, from just under the top bar to the bottom of the window | same | starts at about y 52, as the capture does |
+| sheet header: bold file name (cut with an ellipsis when long), close `×` on the right | same | note: `constitution-gemini.pdf` fits, so there is no ellipsis (shorter name); the `×` is a brighter white (shade) |
 | sheet header subline `<n> pages · <format> · <parser>` | same | note: `3 pages · markdown · Gemini 3.1 Flash Lite` |
 | hairline under the header | same | |
 | `Page 1`: small grey label above the page body | same | |
@@ -94,7 +99,7 @@ glyph at 2-4x zoom. In round 1 every glyph matched except the padlock on Desktop
 | bottom sheet: white, rounded top corners, full width | same | note: starts higher because the title takes two lines |
 | title `Reparse <file>?` in bold | same | note: wraps to two lines (longer name) |
 | sentence `Its pages and summary are cleared, then it runs again with the parser you pick.` | same | |
-| `Parser` label, then three bordered radio rows: `PyPDF · plain text`, `Gemini 3.1 Flash Lite · markdown`, `GPT-5 Mini · OCR`; the selected row has a purple border and tint | same | note: PyPDF is selected instead of GPT-5 Mini (the document's current parser). The parser names are a heavier weight and the `Parser` label a lighter one (type weight) |
+| `Parser` label, then three bordered radio rows: `PyPDF · plain text`, `Gemini 3.1 Flash Lite · markdown`, `GPT-5 Mini · OCR`; the selected row has a purple border and tint | same | note: PyPDF is selected instead of GPT-5 Mini (the document's current parser). The parser names are a heavier weight and the `Parser` label a lighter one (type weight); rows a little shorter (spacing) |
 | outlined `Cancel` and filled purple `Reparse`, right-aligned | same | |
 
 ### `captures/Main.running.png`
@@ -106,7 +111,7 @@ glyph at 2-4x zoom. In round 1 every glyph matched except the padlock on Desktop
 | hairline under the stories row | same | |
 | chips `Parsed 3` (selected, purple border and tint), `Failed`, `All` with counts | same | note: 3 / 0 / 5 (data) |
 | ready card header: round doc icon, bold name, meta `<parser> · <n> pages · <time>`, green `Ready` badge, `…` | same | note: `PyPDF · 85 pages · just now` (data) |
-| summary box: tinted, hairline border, `Summary · Gemini 3.1 Flash Lite` label, serif overview, serif bullets | same | note: a small grey `Key points` line sits between the overview and the bullets. The picture alone cannot show whether it is a heading in the stub's summary markdown or a UI label; it is styled like the box label |
+| summary box: tinted, hairline border, `Summary · Gemini 3.1 Flash Lite` label, serif overview, serif bullets | same | note: the stub summary has a small grey `Key points` heading between the overview and the bullets (data) |
 | action row: book, refresh and copy icons on the left, trash on the right | same | |
 | page preview: bold `Page 1` followed by serif text cut with an ellipsis on the second line, then the `View all <n> pages` link | same | note: the PyPDF text of the sample (data) |
 | hairline between cards | same | |
@@ -125,7 +130,7 @@ glyph at 2-4x zoom. In round 1 every glyph matched except the padlock on Desktop
 | hairline under the stories row | same | |
 | chips `Parsed` (selected, purple tint), `Failed`, `All` with counts | same | note: 3 / 0 / 5 (data) |
 | card header: doc icon, name cut with an ellipsis, meta line, green `Ready` badge, `…` | same | note: the meta `PyPDF · 85 pages · just now` fits, so it is not cut (data) |
-| summary box: tinted, hairline, label, serif overview, serif bullets | same | note: the stub summary is shorter and has a `Key points` line, so the box ends above the tab bar and the action row and the start of the `Page 1` preview show (data) |
+| summary box: tinted, hairline, label, serif overview, serif bullets | same | note: the stub summary is shorter and has a `Key points` heading, so the box ends above the tab bar and the action row and the start of the `Page 1` preview show (data) |
 | bottom tab bar with a hairline above it: home, plus-square, moon | same | |
 
 ### `captures/Tablet.running.png`
@@ -136,7 +141,7 @@ glyph at 2-4x zoom. In round 1 every glyph matched except the padlock on Desktop
 | rate-limit banner at the top of the column: warning triangle, `Too many uploads in the last minute. You can upload again in <n> s.` in orange on an orange tint, rounded | same | note: `22 s` instead of `42 s` (the wait from `Retry-After`) |
 | stories row: `Upload` dashed circle, document circles with name and status | same | note: two processing instead of queued + processing (data state) |
 | hairline, then chips `Parsed` (selected), `Failed`, `All` with counts | same | note: 3 / 0 / 5 (data) |
-| ready card: header, summary box, action row (book, refresh and copy; trash on the right), `Page 1` preview cut with an ellipsis, `View all <n> pages` | same | note: stub summary with a `Key points` line (data) |
+| ready card: header, summary box, action row (book, refresh and copy; trash on the right), `Page 1` preview cut with an ellipsis, `View all <n> pages` | same | note: stub summary with a `Key points` heading (data) |
 | hairline between cards | same | |
 | no-text card: grey `No text` badge; bold `No text found on any page.` then `This usually means a scanned PDF or a photo of a page. Gemini 3.1 Flash Lite reads scanned pages.` | same | |
 | no-text buttons: filled purple `Reparse with Gemini`, outlined `Delete` | same | note: the shorter card above lets the whole box show (data) |
@@ -149,9 +154,9 @@ glyph at 2-4x zoom. In round 1 every glyph matched except the padlock on Desktop
 | dark theme throughout: near-black background, hairline borders, lavender primary | same | |
 | left rail: wordmark (`PDF` lavender); `Feed` selected, `Upload`, `Light mode` with a sun icon | same | |
 | loose labels `scripts/phase.sh implement` and `annual-report` over the summary | same | left out per `## Differences from the source` (AD-025) |
-| stories row (dashed `Upload`, document circles with lavender rings, yellow `Processing`) and hairline | same | note: two processing instead of queued + processing (data state); the `Processing` text is a more orange yellow (shade) |
+| stories row (dashed `Upload`, document circles with lavender rings, yellow `Processing`) and hairline | same | note: two processing instead of queued + processing (data state) |
 | chips `Parsed` (selected, lavender border and purple tint), `Failed`, `All` | same | note: 3 / 0 / 5 (data) |
-| ready card: header with green `Ready` badge, dark summary box, action icons, `Page 1` preview, `View all <n> pages` link | same | note: stub summary with a `Key points` line (data) |
+| ready card: header with green `Ready` badge, dark summary box, action icons, `Page 1` preview, `View all <n> pages` link | same | note: stub summary with a `Key points` heading (data) |
 | no-text card: `No text` badge; bold `No text found on any page.` then `This usually means a scanned PDF or a photo of a page. Gemini 3.1 Flash Lite reads scanned pages.` | same | |
 | no-text buttons: lavender filled `Reparse with Gemini` with dark text, outlined `Delete` | same | |
 | next ready card, cut by the window | same | |
@@ -172,11 +177,11 @@ glyph at 2-4x zoom. In round 1 every glyph matched except the padlock on Desktop
 
 | Element | Result | Picture draws |
 | --- | --- | --- |
-| top bar: wordmark, budget, hairline | same | note: 26 (data) |
-| stories row: dashed `Upload`, document circles with status | same | note: a single processing document (`w3c-dummy`) instead of queued + processing (data state) |
-| chips: `Parsed`, `Failed` (selected, purple tint), `All` with counts | same | note: 0 / 2 / 3 (data) |
+| top bar: wordmark, budget, hairline | same | note: 31 (data) |
+| stories row under the top bar: dashed `Upload` circle with plus, document circles with name and status, hairline under it | same | round 2: the row is back under the top bar: dashed `Upload` circle with plus, then `annual-rep…` and `lecture-no…`, both solid purple with orange `Processing`, and a hairline under it. Note: two processing instead of queued + processing (data state). Round 1: differs, no stories row at all (no document was in flight when the picture was taken) |
+| chips: `Parsed`, `Failed` (selected, purple tint), `All` with counts | same | note: 1 / 2 / 5 (data) |
 | failed card header: doc icon, name, meta, red `Failed` badge, `…` | same | note: the failed card is second; the too-large card is first (newest first, data order) |
-| failed box: pink tint; red reason sentence; then, stacked, filled purple `Retry`, outlined `Reparse with another parser`, outlined `Delete forever` in red text | same | note: reason `The model provider refused this file.` instead of the max-deliveries sentence (another `error_code`); the box runs under the tab bar |
+| failed box: pink tint; red reason sentence; then, stacked, filled purple `Retry`, outlined `Reparse with another parser`, outlined `Delete forever` in red text | same | note: reason `The model provider refused this file.` instead of the max-deliveries sentence (another `error_code`); the box runs under the tab bar, as the capture's does |
 | hairline between cards | same | |
 | too-large card header: doc icon, name, meta cut with an ellipsis, grey `Too large` badge, `…` | same | |
 | too-large box: grey tint; sentence `<limit reason>, so it can't be retried. ... then upload it again.`; outlined `Delete forever` in red text only | same | note: page-limit wording `1,001 pages is over the 1,000-page limit, so it can't be retried. Split the PDF, then upload it again.` The capture draws the size limit (`... Split or compress the PDF, then upload it again.`), which this picture does not show, so that wording cannot be judged here |
@@ -186,7 +191,9 @@ glyph at 2-4x zoom. In round 1 every glyph matched except the padlock on Desktop
 
 | Element | Result | Picture draws |
 | --- | --- | --- |
-| page behind, dimmed: top bar, stories row, chips with `Failed` selected, failed card with Retry, Reparse and Delete forever | same | note: the too-large card sits above the failed card (data order), so most of the failed card's buttons are under the sheet |
+| page behind, dimmed: top bar | same | note: 31 (data) |
+| page behind, dimmed: stories row (dashed `Upload` circle, document circles) and hairline | same | round 2: the dimmed row is back: dashed `Upload`, `annual-rep…` and `lecture-no…` processing, hairline above the chips. Note: two processing instead of queued + processing (data state). Round 1: differs, no stories row |
+| page behind, dimmed: chips with `Failed` selected, failed card with `Retry`, `Reparse with another parser` and `Delete forever` | same | note: the too-large card sits above the failed card (data order), so the failed card's buttons are under the sheet; only the top edge of `Retry` shows |
 | bottom sheet: white, rounded top corners, full width | same | |
 | title `Delete <file> forever?` in bold | same | note: fits on one line (shorter name) |
 | sentence `The PDF, its pages and its summary are removed for good. This can't be undone.` | same | |
