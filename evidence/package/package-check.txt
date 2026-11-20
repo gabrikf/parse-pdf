@@ -1,0 +1,15 @@
+zip: 395 entries, 4.1M
+ok   no entry matches /\.venv/
+ok   no entry matches /node_modules/
+ok   no entry matches /\.env$
+ok   no entry matches /\.specs/
+ok   no entry matches /\.claude/
+ok   no entry matches /evidence/
+ok   holds parse-pdf/README.md
+ok   holds parse-pdf/compose.yaml
+ok   holds parse-pdf/.env.example
+ok   holds parse-pdf/docs/postman/parse-pdf.postman_collection.json
+ok   holds parse-pdf/samples/w3c-dummy-locked.pdf
+ok   holds parse-pdf/backend/pyproject.toml
+ok   holds parse-pdf/frontend/package.json
+result: PASSED
