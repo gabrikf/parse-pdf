@@ -52,6 +52,8 @@ export function UploadPage() {
 
   const activeDocuments = active.data ?? []
   const nothingYet = ready && feed.counts?.all === 0 && activeDocuments.length === 0
+  // The Upload story stays once any document exists; the empty feed has its own upload (AD-053).
+  const hasDocuments = (feed.counts?.all ?? 0) > 0 || activeDocuments.length > 0
   const handlers: CardHandlers = {
     onOpenPages: setReading,
     onAsk: (action, document, parser) => confirmFlow.ask(parser ? { action, document, parser } : { action, document }),
@@ -73,7 +75,7 @@ export function UploadPage() {
         <div className={styles.column}>
           <h1 className="visually-hidden">Your documents</h1>
           <Notices onRetry={retry} />
-          {activeDocuments.length > 0 ? <StoriesRow active={activeDocuments} onUpload={openUpload} onOpen={openStory} /> : null}
+          {hasDocuments ? <StoriesRow active={activeDocuments} onUpload={openUpload} onOpen={openStory} /> : null}
           {nothingYet ? (
             <EmptyFeed onUpload={openUpload} />
           ) : (

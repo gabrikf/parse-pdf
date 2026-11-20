@@ -59,3 +59,23 @@ def test_settings_normalize_summary_model_id() -> None:
         **REQUIRED,  # type: ignore[arg-type]
     )
     assert settings.summary_model_id == "google/gemini-3.1-flash-lite"
+
+
+def test_guardrail_allows_document_categories_by_default() -> None:
+    settings = Settings(session_secret="x" * 32, **REQUIRED)  # type: ignore[arg-type]
+
+    assert settings.guardrail_allowed == frozenset({"S6", "S7", "S8"})
+
+
+@pytest.mark.parametrize(
+    ("raw", "allowed"),
+    [("none", set()), ("NONE", set()), ("", set()), (" s6 , S12,", {"S6", "S12"}), ("S7", {"S7"})],
+)
+def test_guardrail_allowed_categories_are_parsed(raw: str, allowed: set[str]) -> None:
+    settings = Settings(
+        session_secret="x" * 32,
+        guardrail_allowed_categories=raw,
+        **REQUIRED,  # type: ignore[arg-type]
+    )
+
+    assert settings.guardrail_allowed == frozenset(allowed)

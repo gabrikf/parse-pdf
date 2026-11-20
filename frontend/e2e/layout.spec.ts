@@ -70,7 +70,7 @@ test('wide screens show both rails with the budget and phones a tab bar', async 
   await shot(page, info, 'rails-and-tab-bar')
 })
 
-test('the stories row shows active documents and hides when empty', async ({ page }, info) => {
+test('the stories row shows active documents and keeps Upload once any document exists', async ({ page }, info) => {
   await openApp(page)
   const stories = page.getByRole('region', { name: 'In progress' })
   await expect(stories).toHaveCount(0)
@@ -80,7 +80,8 @@ test('the stories row shows active documents and hides when empty', async ({ pag
   await shot(page, info, 'stories-row')
 
   await expectStatus(page, SAMPLE.dummy, 'ready')
-  await expect(stories).toHaveCount(0)
+  await expect(stories.getByRole('button', { name: /, (queued|processing)$/ })).toHaveCount(0)
+  await expect(stories.getByRole('button', { name: 'Upload' })).toBeVisible()
 
   // Tapping a story scrolls to its card: reparse the oldest card, so it sits below 4 newer ones.
   await upload(page, ['a.pdf', 'b.pdf', 'c.pdf', 'd.pdf'].map((name) => pdfFile(name, sample(SAMPLE.dummy).buffer)))

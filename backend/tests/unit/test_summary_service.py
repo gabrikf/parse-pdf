@@ -135,6 +135,31 @@ async def test_guard_unsafe_verdicts(verdict: str) -> None:
     assert await LlamaGuard(FakeChat(guard_verdict=verdict), GUARD_MODEL).is_safe("x") is False
 
 
+DOCUMENT_CATEGORIES = frozenset({"S6", "S7", "S8"})
+
+
+@pytest.mark.parametrize(
+    "verdict", ["unsafe\nS6", "unsafe\nS7", "unsafe\ns8", "unsafe\nS6,S7", "unsafe\nS6, S8\n"]
+)
+async def test_guard_passes_unsafe_naming_only_allowed_categories(verdict: str) -> None:
+    guard = LlamaGuard(FakeChat(guard_verdict=verdict), GUARD_MODEL, DOCUMENT_CATEGORIES)
+
+    assert await guard.is_safe("x") is True
+
+
+@pytest.mark.parametrize(
+    "verdict", ["unsafe\nS1", "unsafe\nS6,S1", "unsafe\nS7\nS11", "unsafe", "unsafe\nS60"]
+)
+async def test_guard_blocks_any_category_outside_the_allowed_ones(verdict: str) -> None:
+    guard = LlamaGuard(FakeChat(guard_verdict=verdict), GUARD_MODEL, DOCUMENT_CATEGORIES)
+
+    assert await guard.is_safe("x") is False
+
+
+async def test_guard_with_no_allowed_categories_blocks_specialized_advice() -> None:
+    assert await LlamaGuard(FakeChat(guard_verdict="unsafe\nS6"), GUARD_MODEL).is_safe("x") is False
+
+
 @pytest.mark.parametrize("verdict", ["", "88282822288888282888", "safety first", "I cannot tell"])
 async def test_guard_unreadable_verdict_is_asked_3_times_then_transient(verdict: str) -> None:
     chat = FakeChat(guard_verdict=verdict)

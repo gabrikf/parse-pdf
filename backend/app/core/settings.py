@@ -52,6 +52,9 @@ class Settings(BaseSettings):
     gemini_parser_model_id: str = "google/gemini-3.1-flash-lite"
     gpt_parser_model_id: str = "openai/gpt-5-mini"
     guardrail_model_id: str = "meta-llama/llama-guard-4-12b"
+    # Llama Guard categories that do not block a document (AD-054): S6 specialized advice,
+    # S7 privacy, S8 intellectual property. Comma-separated; `none` blocks every category.
+    guardrail_allowed_categories: str = "S6,S7,S8"
 
     model_page_budget_per_day: int = 3000
     openrouter_calls_per_minute: int = 30
@@ -80,6 +83,12 @@ class Settings(BaseSettings):
         if len(value.encode()) < MIN_SECRET_BYTES:
             raise ValueError(f"SESSION_SECRET must be at least {MIN_SECRET_BYTES} bytes")
         return value
+
+    @property
+    def guardrail_allowed(self) -> frozenset[str]:
+        """The allowed Llama Guard categories as codes, upper case (``none`` gives none)."""
+        codes = (code.strip().upper() for code in self.guardrail_allowed_categories.split(","))
+        return frozenset(code for code in codes if code and code != "NONE")
 
     @field_validator("summary_model_id", "gemini_parser_model_id")
     @classmethod

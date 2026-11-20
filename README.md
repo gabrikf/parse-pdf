@@ -229,6 +229,7 @@ The full table, with each decision's rationale and the words that settled it, is
 | AD-007 | Security headers on every response |
 | AD-008 | Limits in Redis: 10 uploads per minute and 2 in flight per session, 20 sessions per minute per IP, 30 OpenRouter calls per minute shared |
 | AD-009 | Llama Guard 4 checks the summary input and output |
+| AD-054 | Llama Guard categories S6, S7 and S8 (specialized advice, privacy, intellectual property) do not block: a lab report or a contract is a normal upload. Set `GUARDRAIL_ALLOWED_CATEGORIES=none` to block them too |
 | AD-010 | No accounts: an anonymous signed session (HttpOnly cookie or Bearer) scopes every read and write |
 | AD-011 | Feature folder plus capability folders, interface beside implementations, enforced by import-linter |
 | AD-012 | 7-day retention on every key and object |
@@ -345,6 +346,7 @@ whose outcome only is written down) are kept in `evidence/` in the repository.
 - A per-session model page budget on top of the global one.
 - Streaming uploads to the bucket instead of reading each file into memory (50 MiB each, 20 per
   request, 2 requests per session).
+- Per-document guardrail overrides: today `GUARDRAIL_ALLOWED_CATEGORIES` applies to every upload.
 - Prompt-injection detection: Llama Guard catches unsafe content, not instructions hidden in a PDF;
   today delimiters and the system message are the only defense.
 - An admin view of `docs:dead` with a bulk retry.

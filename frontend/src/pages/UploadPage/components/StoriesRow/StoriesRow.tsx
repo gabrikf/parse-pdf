@@ -25,7 +25,8 @@ interface StoriesRowProps {
 
 /**
  * The Upload circle and one circle per `queued` or `processing` document, its ring showing the
- * status; tapping one scrolls to its card (criterion 69). Chips never filter this row.
+ * status; tapping one scrolls to its card (criterion 69). Shown once any document exists, so the
+ * Upload circle stays when nothing is in progress (AD-053). Chips never filter this row.
  */
 export function StoriesRow({ active, onUpload, onOpen }: StoriesRowProps) {
   return (

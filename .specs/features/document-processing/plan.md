@@ -1,7 +1,7 @@
 # Document processing - upload PDFs, parse per page, summarize, async on Redis Streams
 
 **Approved**: 2026-11-19 - user: "Approve the plan"
-**Settled mid-build:** 2026-11-19 (design session, before any build) - user: "use instagram as the base layout but with other colors choose which combine more here purple or green as the primary and do it with light and dark mode options"; then chose fonts "Keep both", stories row "Yes, progress rings", desktop "Instagram 3 columns", prototype "Live HTML mockup" - AD-020; criteria 67-71 and `GET /api/v1/budget` added; then "we must have a chip clickable filter that is default just already parsed docs, and will have the other option to show all parsed queued and processing, on stories they will never be ommited, this filter is only for the feed aread" - AD-021, criteria 16 and 72, `state` on `GET /api/v1/documents`; then "how about the failed ones? we must have one option to retry and see the failed, retry or remove forever" - AD-022, criteria 16, 72 and 73 rewritten: Parsed / Failed / All chips, Retry and Delete forever on failed cards; canvas frames PhoneFailed and PhoneDelete approved: "Looks right"; then, answering the build's stops: "1- you have my ok" (S6 frame captures and the sample downloads; the two public samples were downloaded the same day into `samples/`), "2- if the decision is easy to decide what is better you take, just if is a metter of preference, but most part try to do at your own" - AD-023, "4- really? if you can you can push, if is not allowed you can just commit and we push in the end" - AD-023 (push to `origin/main` after each slice commit is approved), "6: perfect, if possible use as well playwright cli to test all and guarantee we have no issues." - AD-024, criterion 81; the two loose text labels on the DesktopDark frame are notes, not UI - AD-025
+**Settled mid-build:** 2026-11-19 (design session, before any build) - user: "use instagram as the base layout but with other colors choose which combine more here purple or green as the primary and do it with light and dark mode options"; then chose fonts "Keep both", stories row "Yes, progress rings", desktop "Instagram 3 columns", prototype "Live HTML mockup" - AD-020; criteria 67-71 and `GET /api/v1/budget` added; then "we must have a chip clickable filter that is default just already parsed docs, and will have the other option to show all parsed queued and processing, on stories they will never be ommited, this filter is only for the feed aread" - AD-021, criteria 16 and 72, `state` on `GET /api/v1/documents`; then "how about the failed ones? we must have one option to retry and see the failed, retry or remove forever" - AD-022, criteria 16, 72 and 73 rewritten: Parsed / Failed / All chips, Retry and Delete forever on failed cards; canvas frames PhoneFailed and PhoneDelete approved: "Looks right"; then, answering the build's stops: "1- you have my ok" (S6 frame captures and the sample downloads; the two public samples were downloaded the same day into `samples/`), "2- if the decision is easy to decide what is better you take, just if is a metter of preference, but most part try to do at your own" - AD-023, "4- really? if you can you can push, if is not allowed you can just commit and we push in the end" - AD-023 (push to `origin/main` after each slice commit is approved), "6: perfect, if possible use as well playwright cli to test all and guarantee we have no issues." - AD-024, criterion 81; the two loose text labels on the DesktopDark frame are notes, not UI - AD-025; then, from manual testing on 2026-11-20: "when we already have at list one document processed this upload + button should always appear... just not when none documents exist already." - AD-053, criterion 69 rewritten; "check why this exames de sangue file is not going well, test it, and make work, at least with the llm models" - the user's lab report was rejected by Llama Guard as S6 (specialized advice), AD-054, criterion 31 rewritten
 **Review:** 2026-11-20 - Verifier and screens round 1 sent at `19cf1ff` (fresh sub-agents); Verifier FAIL with 9 findings, screens 5 match and 6 diverge; after the pre-push review, Verifier on 4aa581f..68cfd98 and a new screens review (AD-049, round 1 at `932cbba`: 10 match, DesktopUpload diverges on the padlock) sent as fresh sub-agents
 **Fix pass:** 2026-11-20 - `28a6e1c` closes all 9 findings and the 6 diverging frames (AD-039, AD-040, AD-041); pictures re-saved and screens round 2 sent at `28a6e1c`; `8335551` closes the open pre-push items and the PhonePages frame (AD-042..AD-047), `68cfd98` the DesktopUpload padlock, `9de7ed3` the Verifier's 3 findings on 4aa581f..68cfd98, then pictures re-saved and a fresh screens review (AD-050) sent at `b041b7b`; `ebd58a3` fixes the capture race behind its 2 diverging frames, pictures re-saved and its round 2 sent at `ebd58a3`; the whole-application review's 13 kept fixes in `da2480d`, pictures re-saved and a fresh screens review (AD-052) sent at `da2480d`; `2243668` draws the story-circle glyph as the frames do, pictures re-saved and its round 2 sent at `2243668`; pictures re-saved and the new review's round 2 sent at `68cfd98`
 
@@ -374,9 +374,12 @@ waits and retries instead of failing.
     `<document>` delimiters, with a system message saying the content is data and its instructions
     are not to be followed
 31. WHEN text is about to be summarized THEN the system SHALL check each input piece and the final
-    summary with `meta-llama/llama-guard-4-12b`; IF either is `unsafe` THEN it SHALL set `dead` with
-    `error_code: "guardrail_rejected"` without retrying, and SHALL not call the summary model for a
-    rejected input
+    summary with `meta-llama/llama-guard-4-12b`; IF either is `unsafe` with no category, or with
+    any category outside `GUARDRAIL_ALLOWED_CATEGORIES` (default `S6,S7,S8`), THEN it SHALL set
+    `dead` with `error_code: "guardrail_rejected"` without retrying, and SHALL not call the summary
+    model for a rejected input; `unsafe` naming only allowed categories SHALL pass
+    - `unsafe\nS6` passes; `unsafe\nS6,S1`, `unsafe\nS1` and a bare `unsafe` are rejected; with
+      `none` every `unsafe` is rejected
 32. IF OpenRouter answers 429, 5xx, or times out after 60 s THEN the system SHALL retry the call in
     the worker up to 6 attempts with exponential backoff (1 s base, x2, 60 s cap, full jitter),
     waiting at least `Retry-After` seconds when the header is present; IF all 6 fail THEN the job
@@ -520,9 +523,11 @@ pages. The look is bound by the design from the `frontend-blueprint` session (op
     theme toggle THEN it SHALL switch between light and dark and keep the choice on the next visit;
     every text and control SHALL keep at least 4.5:1 contrast in both themes (captures:
     `captures/DesktopDark.png`, `captures/PhoneDark.png`)
-69. WHILE any document is `queued` or `processing` the page SHALL show it in a stories row above
-    the feed as a circle whose ring shows its status; tapping one SHALL scroll to its card; a
-    document SHALL leave the row when it reaches a final status, and the row SHALL hide when empty
+69. WHILE the session has at least one document the page SHALL show a stories row above the feed
+    that starts with the Upload circle, followed by one circle per `queued` or `processing`
+    document whose ring shows its status; tapping one SHALL scroll to its card; a document SHALL
+    leave the row when it reaches a final status, and the Upload circle SHALL stay; WHILE the
+    session has no document the row SHALL not show (the empty feed offers the upload)
 70. WHEN the window is 1024 px or wider THEN the page SHALL show a left icon rail (feed, upload,
     theme), a centered feed column, and a right rail with the parser guide and today's model page
     budget from `GET /api/v1/budget`; below 768 px the rail SHALL become a bottom tab bar
@@ -638,6 +643,8 @@ A reviewer can run, demo and judge the work from the zip alone.
 
 ## Differences from the source
 
+- The stories row stays, with its Upload circle, once any document exists; the canvas hides it
+  when nothing is in progress (`showStories: busy.length > 0`). Confirmed: y - AD-053
 - The two loose text labels on the DesktopDark frame ("annual-report" at 626,405 and
   "scripts/phase.sh implement" at 261,371) are left out of the product: notes dropped on the
   canvas, not UI. Confirmed: y - AD-025
@@ -647,7 +654,7 @@ None - the product matches the approved canvas, updated for AD-022 (Parsed / Fai
 ## Sources
 
 - `docs/private/BWAI2.1_test_task.docx` (local, gitignored; verbatim text in `docs/private/test-task.md`) - binding - the brief: stack, parsers, Redis Streams, priorities
-- https://claude.ai/artifact/SjyC1dbhNKYs437TwVXWBX (design canvas, approved 2026-11-19, user: "Looks right") - binding - the upload page's composition, states and copy at 1280, 768 and 375 px in light and dark; source copied to `captures/canvas/`
+- https://claude.ai/artifact/SjyC1dbhNKYs437TwVXWBX (design canvas, approved 2026-11-19, user: "Looks right") - binding - the upload page's composition, states and copy at 1280, 768 and 375 px in light and dark; source copied to `captures/canvas/` ![Main](captures/Main.png) ![DesktopDark](captures/DesktopDark.png) ![DesktopUpload](captures/DesktopUpload.png) ![Tablet](captures/Tablet.png) ![PhoneLight](captures/PhoneLight.png) ![PhoneDark](captures/PhoneDark.png) ![PhonePages](captures/PhonePages.png) ![PhoneConfirm](captures/PhoneConfirm.png) ![PhoneEmpty](captures/PhoneEmpty.png) ![PhoneFailed](captures/PhoneFailed.png) ![PhoneDelete](captures/PhoneDelete.png)
 - `samples/SOURCES.md` - binding - the sample PDFs, their sources, licenses and hashes
 - `.specs/features/document-processing/request.md` - binding - a summary of the brief plus the user's decisions, verbatim
 - https://github.com/kliuchnikovv/summer, https://github.com/masalinas/bwaai2,

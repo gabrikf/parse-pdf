@@ -77,7 +77,7 @@ def build_worker_parts(
     )
 
     budget = RedisModelBudget(redis, clock, settings.model_page_budget_per_day)
-    guard = LlamaGuard(chat, settings.guardrail_model_id)
+    guard = LlamaGuard(chat, settings.guardrail_model_id, settings.guardrail_allowed)
     summaries = SummaryService(chat, guard, budget, settings.summary_model_id)
     process = ProcessDocumentUseCase(
         repository,
