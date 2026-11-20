@@ -3,7 +3,8 @@
 #
 # Steps, each safe to repeat:
 #   1. check Docker, Compose v2 and curl
-#   2. create .env from .env.example, generate SESSION_SECRET, add any new variables
+#   2. create .env from .env.example, generate SESSION_SECRET, add any new variables, and ask
+#      for the OpenRouter key when it is empty (hidden input; or OPENROUTER_API_KEY=... in the shell)
 #   3. pull the images we do not build (redis, seaweedfs), only when missing
 #   4. build the api/worker and web images (cached when nothing changed)
 #   5. migrations and seeds: none to run (see the step's message)
@@ -92,21 +93,45 @@ prepare_env() {
   [[ $added -gt 0 ]] && ok "added $added new variable(s) from .env.example"
 
   if [[ -z "$(env_value SESSION_SECRET)" ]]; then
-    local secret tmp
-    secret="$(random_secret)"
-    tmp="$(mktemp)"
-    awk -v s="$secret" 'BEGIN{done=0} /^SESSION_SECRET=/{ if(!done){print "SESSION_SECRET=" s; done=1}; next } {print}' .env >"$tmp"
-    cat "$tmp" >.env && rm -f "$tmp"
+    set_env_value SESSION_SECRET "$(random_secret)"
     ok "generated SESSION_SECRET (64 hex characters, not shown)"
   else
     ok "SESSION_SECRET is set"
   fi
 
-  if [[ -z "$(env_value OPENROUTER_API_KEY)" ]]; then
+  ask_for_openrouter_key
+}
+
+# Write KEY=value over the first KEY= line of .env; the value never reaches the terminal.
+set_env_value() {
+  local tmp
+  tmp="$(mktemp)"
+  awk -v k="$1" -v v="$2" 'BEGIN{done=0} index($0, k "=") == 1 { if(!done){print k "=" v; done=1}; next } {print}' .env >"$tmp"
+  cat "$tmp" >.env && rm -f "$tmp"
+}
+
+# An empty key is taken from the shell (OPENROUTER_API_KEY=... make bootstrap), or asked for with
+# hidden input when a person runs this in a terminal. Enter skips: PyPDF works without a key.
+ask_for_openrouter_key() {
+  if [[ -n "$(env_value OPENROUTER_API_KEY)" ]]; then
+    ok "OPENROUTER_API_KEY is set"
+    return
+  fi
+
+  local key="${OPENROUTER_API_KEY:-}"
+  if [[ -z "$key" && -t 0 ]]; then
+    printf '  Paste the OpenRouter API key (input hidden, Enter to skip): '
+    read -rs key || key=""
+    printf '\n'
+  fi
+  key="$(printf '%s' "$key" | tr -d '[:space:]')"
+
+  if [[ -n "$key" ]]; then
+    set_env_value OPENROUTER_API_KEY "$key"
+    ok "OPENROUTER_API_KEY saved to .env (not shown)"
+  else
     warn "OPENROUTER_API_KEY is empty: PyPDF works, Gemini, GPT-5 Mini and summaries do not."
     warn "Put a key in .env (https://openrouter.ai/settings/keys) and run this again."
-  else
-    ok "OPENROUTER_API_KEY is set"
   fi
 }
 

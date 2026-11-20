@@ -37,7 +37,8 @@ Open <http://localhost:8080>. The API is under <http://localhost:8080/api/v1>.
 
 `SESSION_SECRET` is the only required value. With `OPENROUTER_API_KEY` empty, PyPDF still parses
 every file and the summary ends with `provider_not_configured`. Put a key in `.env` to use Gemini
-3.1 Flash Lite, GPT-5 Mini and the summaries. `.env.example` lists every variable with its default.
+3.1 Flash Lite, GPT-5 Mini and the summaries: `make bootstrap` asks for it when `.env` has none
+(hidden input, Enter skips) and saves it to `.env`, which git ignores. `.env.example` lists every variable with its default.
 
 Compose starts five services: `redis` (AOF on), `storage` (SeaweedFS, S3 API), `api` (two
 uvicorn processes), `worker` (scale it with `--scale worker=3`) and `web` (nginx with the built
